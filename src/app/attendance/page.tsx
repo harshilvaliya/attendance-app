@@ -58,7 +58,7 @@ export default function AttendancePage() {
               <CardTitle className="text-sm font-medium">
                 Absent Today
               </CardTitle>
-              <UserX className="h-4 w-4 text-red-500"/>
+              <UserX className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{today.absent}</div>
@@ -92,7 +92,7 @@ export default function AttendancePage() {
           <TabsContent value="today" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Today's Attendance</CardTitle>
+                <CardTitle>Today&apos;s Attendance</CardTitle>
                 <CardDescription>
                   Attendance for{" "}
                   {new Date().toLocaleDateString("en-US", {

@@ -9,9 +9,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <ToastProvider>{children}</ToastProvider>
-      </body>
+      <ToastProvider>
+        <body>{children}</body>
+      </ToastProvider>
     </html>
   );
 }
