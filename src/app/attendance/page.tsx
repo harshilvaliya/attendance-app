@@ -1,14 +1,20 @@
-import { DashboardShell } from "@/components/dashboard/dashboard-shell"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getAttendanceData } from "@/lib/data"
-import { CalendarIcon, Clock, UserCheck, UserX } from "lucide-react"
-import { AttendanceTable } from "@/components/dashboard/attendance-table"
-import { Button } from "@/components/ui/button"
-import { MarkAttendanceDialog } from "@/components/dashboard/mark-attendance-dialog"
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getAttendanceData } from "@/lib/data";
+import { CalendarIcon, Clock, UserCheck, UserX } from "lucide-react";
+import { AttendanceTable } from "@/components/dashboard/attendance-table";
+import { Button } from "@/components/ui/button";
+import { MarkAttendanceDialog } from "@/components/dashboard/mark-attendance-dialog";
 
 export default function AttendancePage() {
-  const { today } = getAttendanceData()
+  const { today } = getAttendanceData();
 
   return (
     <DashboardShell>
@@ -16,7 +22,9 @@ export default function AttendancePage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
-            <p className="text-muted-foreground">Manage employee attendance records</p>
+            <p className="text-muted-foreground">
+              Manage employee attendance records
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <MarkAttendanceDialog>
@@ -31,21 +39,26 @@ export default function AttendancePage() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Present Today</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Present Today
+              </CardTitle>
               <UserCheck className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{today.present}</div>
               <p className="text-xs text-muted-foreground">
-                {Math.round((today.present / today.total) * 100)}% of total staff
+                {Math.round((today.present / today.total) * 100)}% of total
+                staff
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Absent Today</CardTitle>
-              <UserX className="h-4 w-4 text-red-500" />
+              <CardTitle className="text-sm font-medium">
+                Absent Today
+              </CardTitle>
+              <UserX className="h-4 w-4 text-red-500"/>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{today.absent}</div>
@@ -57,7 +70,9 @@ export default function AttendancePage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Late Arrivals</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Late Arrivals
+              </CardTitle>
               <Clock className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent>
@@ -107,5 +122,5 @@ export default function AttendancePage() {
         </Tabs>
       </div>
     </DashboardShell>
-  )
+  );
 }
