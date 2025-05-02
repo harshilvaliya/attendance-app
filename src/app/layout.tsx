@@ -1,6 +1,7 @@
 import type React from "react";
 import "../app/globals.css";
 import { ToastProvider } from "@/components/ui/use-toast";
+import BottomNavigation from "@/components/user/bottom-nav";
 
 export default function RootLayout({
   children,
@@ -10,7 +11,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          {children}
+          <BottomNavigation />
+        </ToastProvider>
       </body>
     </html>
   );
