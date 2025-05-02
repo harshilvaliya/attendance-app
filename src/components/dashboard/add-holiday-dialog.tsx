@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,50 +12,76 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon } from "lucide-react"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/components/ui/use-toast"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import Calendar from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
+import { DateValue } from "@internationalized/date";
 
 export function AddHolidayDialog({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(false)
-  const [name, setName] = useState("")
-  const [date, setDate] = useState<Date>()
-  const [type, setType] = useState("")
-  const { toast } = useToast()
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [date, setDate] = useState<{ start: DateValue; end: DateValue } | null>(
+    null
+  );
+  const [type, setType] = useState("");
+  const { toast } = useToast();
+
+  const formatDateRange = (
+    date: { start: DateValue; end: DateValue } | null
+  ) => {
+    if (!date) return "";
+    const startDate = new Date(date.start.toString());
+    const endDate = new Date(date.end.toString());
+
+    if (startDate.getTime() === endDate.getTime()) {
+      return format(startDate, "PPP");
+    }
+    return `${format(startDate, "PPP")} - ${format(endDate, "PPP")}`;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!name || !date || !type) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     toast({
       title: "Holiday added",
       description: `${name} has been added to the holiday calendar`,
-    })
+    });
 
-    setOpen(false)
-    resetForm()
-  }
+    setOpen(false);
+    resetForm();
+  };
 
   const resetForm = () => {
-    setName("")
-    setDate(undefined)
-    setType("")
-  }
+    setName("");
+    setDate(null);
+    setType("");
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -64,7 +90,9 @@ export function AddHolidayDialog({ children }: { children: React.ReactNode }) {
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Add Holiday</DialogTitle>
-            <DialogDescription>Add a new holiday to the company calendar</DialogDescription>
+            <DialogDescription>
+              Add a new holiday to the company calendar
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -84,14 +112,21 @@ export function AddHolidayDialog({ children }: { children: React.ReactNode }) {
                   <Button
                     id="date"
                     variant={"outline"}
-                    className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : "Select date"}
+                    {date ? formatDateRange(date) : "Select date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+                  <Calendar
+                    value={date}
+                    onChange={(newDate) => setDate(newDate)}
+                    mode="range"
+                  />
                 </PopoverContent>
               </Popover>
             </div>
@@ -103,8 +138,12 @@ export function AddHolidayDialog({ children }: { children: React.ReactNode }) {
                   <SelectValue placeholder="Select holiday type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Federal Holiday">Federal Holiday</SelectItem>
-                  <SelectItem value="Company Holiday">Company Holiday</SelectItem>
+                  <SelectItem value="Federal Holiday">
+                    Federal Holiday
+                  </SelectItem>
+                  <SelectItem value="Company Holiday">
+                    Company Holiday
+                  </SelectItem>
                   <SelectItem value="Observance">Observance</SelectItem>
                   <SelectItem value="Special Event">Special Event</SelectItem>
                 </SelectContent>
@@ -112,7 +151,11 @@ export function AddHolidayDialog({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit">Add Holiday</Button>
@@ -120,5 +163,5 @@ export function AddHolidayDialog({ children }: { children: React.ReactNode }) {
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
