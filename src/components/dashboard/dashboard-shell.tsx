@@ -1,16 +1,16 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
+import { useState } from "react";
+import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 
 interface DashboardShellProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export function DashboardShell({ children }: DashboardShellProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -19,5 +19,5 @@ export function DashboardShell({ children }: DashboardShellProps) {
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
     </div>
-  )
+  );
 }

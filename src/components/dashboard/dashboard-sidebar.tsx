@@ -1,21 +1,32 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { BarChart3, Calendar, Home, Menu, Users, FileText, LogOut } from "lucide-react"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  BarChart3,
+  Calendar,
+  Home,
+  Menu,
+  Users,
+  FileText,
+  LogOut,
+} from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 interface DashboardSidebarProps {
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function DashboardSidebar({ open, onOpenChange }: DashboardSidebarProps) {
-  const pathname = usePathname()
+export function DashboardSidebar({
+  open,
+  onOpenChange,
+}: DashboardSidebarProps) {
+  const pathname = usePathname();
 
   const routes = [
     {
@@ -54,7 +65,7 @@ export function DashboardSidebar({ open, onOpenChange }: DashboardSidebarProps) 
       href: "/reports",
       active: pathname === "/reports",
     },
-  ]
+  ];
 
   return (
     <>
@@ -73,7 +84,7 @@ export function DashboardSidebar({ open, onOpenChange }: DashboardSidebarProps) 
         <DesktopSidebar routes={routes} />
       </aside>
     </>
-  )
+  );
 }
 
 function MobileSidebar({ routes }: { routes: any[] }) {
@@ -93,7 +104,9 @@ function MobileSidebar({ routes }: { routes: any[] }) {
               href={route.href}
               className={cn(
                 "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                route.active ? "bg-accent text-accent-foreground" : "transparent",
+                route.active
+                  ? "bg-accent text-accent-foreground"
+                  : "transparent"
               )}
             >
               <route.icon className="h-4 w-4" />
@@ -109,12 +122,12 @@ function MobileSidebar({ routes }: { routes: any[] }) {
         </Button>
       </div>
     </div>
-  )
+  );
 }
 
 function DesktopSidebar({ routes }: { routes: any[] }) {
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col ">
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <Users className="h-6 w-6" />
@@ -129,7 +142,9 @@ function DesktopSidebar({ routes }: { routes: any[] }) {
               href={route.href}
               className={cn(
                 "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                route.active ? "bg-accent text-accent-foreground" : "transparent",
+                route.active
+                  ? "bg-accent text-accent-foreground"
+                  : "transparent"
               )}
             >
               <route.icon className="h-4 w-4" />
@@ -137,13 +152,13 @@ function DesktopSidebar({ routes }: { routes: any[] }) {
             </Link>
           ))}
         </nav>
+        <div className="border-t p-4">
+          <Button variant="outline" className="w-full justify-start gap-2">
+            <LogOut className="h-4 w-4" />
+            Logout
+          </Button>
+        </div>
       </ScrollArea>
-      <div className="border-t p-4">
-        <Button variant="outline" className="w-full justify-start gap-2">
-          <LogOut className="h-4 w-4" />
-          Logout
-        </Button>
-      </div>
     </div>
-  )
+  );
 }
