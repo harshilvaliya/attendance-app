@@ -1,33 +1,56 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Check, X } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Check, X, FileText } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import Link from "next/link";
 
 interface LeaveRequest {
-  id: number
-  employee: string
-  type: string
-  from: string
-  to: string
-  status: string
+  id: number;
+  employee: string;
+  type: string;
+  description: string;
+  document: string | null;
+  from: string;
+  to: string;
+  status: string;
 }
 
 interface LeaveRequestsTableProps {
-  requests: LeaveRequest[]
+  requests: LeaveRequest[];
 }
 
-export function LeaveRequestsTable({ requests: initialRequests }: LeaveRequestsTableProps) {
-  const [requests, setRequests] = useState<LeaveRequest[]>(initialRequests)
-  const { toast } = useToast()
+export function LeaveRequestsTable({
+  requests: initialRequests,
+}: LeaveRequestsTableProps) {
+  const [requests, setRequests] = useState<LeaveRequest[]>(initialRequests);
+  const { toast } = useToast();
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-  }
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -39,7 +62,7 @@ export function LeaveRequestsTable({ requests: initialRequests }: LeaveRequestsT
           >
             Pending
           </Badge>
-        )
+        );
       case "approved":
         return (
           <Badge
@@ -48,7 +71,7 @@ export function LeaveRequestsTable({ requests: initialRequests }: LeaveRequestsT
           >
             Approved
           </Badge>
-        )
+        );
       case "rejected":
         return (
           <Badge
@@ -57,29 +80,37 @@ export function LeaveRequestsTable({ requests: initialRequests }: LeaveRequestsT
           >
             Rejected
           </Badge>
-        )
+        );
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   const handleApprove = (id: number) => {
-    setRequests(requests.map((request) => (request.id === id ? { ...request, status: "approved" } : request)))
+    setRequests(
+      requests.map((request) =>
+        request.id === id ? { ...request, status: "approved" } : request
+      )
+    );
 
     toast({
       title: "Request approved",
       description: "The leave request has been approved successfully",
-    })
-  }
+    });
+  };
 
   const handleReject = (id: number) => {
-    setRequests(requests.map((request) => (request.id === id ? { ...request, status: "rejected" } : request)))
+    setRequests(
+      requests.map((request) =>
+        request.id === id ? { ...request, status: "rejected" } : request
+      )
+    );
 
     toast({
       title: "Request rejected",
       description: "The leave request has been rejected",
-    })
-  }
+    });
+  };
 
   return (
     <div className="rounded-md border">
@@ -91,14 +122,51 @@ export function LeaveRequestsTable({ requests: initialRequests }: LeaveRequestsT
             <TableHead>From</TableHead>
             <TableHead>To</TableHead>
             <TableHead>Status</TableHead>
-            {requests[0]?.status === "pending" && <TableHead className="text-right">Actions</TableHead>}
+            {requests[0]?.status === "pending" && (
+              <TableHead className="text-right">Actions</TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
           {requests.map((request) => (
             <TableRow key={request.id}>
               <TableCell className="font-medium">{request.employee}</TableCell>
-              <TableCell>{request.type}</TableCell>
+              <TableCell>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="link" className="p-0 h-auto">
+                      {request.type}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Leave Request Details</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium">Type</h4>
+                        <p>{request.type}</p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Description</h4>
+                        <p className="text-muted-foreground">
+                          {request.description}
+                        </p>
+                      </div>
+                      {request.document && (
+                        <div>
+                          <Button asChild variant="outline" className="gap-2">
+                            <Link href={`/leaves/document/${request.id}`}>
+                              <FileText className="h-4 w-4" />
+                              View Document
+                            </Link>
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </TableCell>
               <TableCell>{formatDate(request.from)}</TableCell>
               <TableCell>{formatDate(request.to)}</TableCell>
               <TableCell>{getStatusBadge(request.status)}</TableCell>
@@ -131,5 +199,5 @@ export function LeaveRequestsTable({ requests: initialRequests }: LeaveRequestsT
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }
