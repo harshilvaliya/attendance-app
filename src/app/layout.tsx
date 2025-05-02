@@ -8,10 +8,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <ToastProvider>
-        <body>{children}</body>
-      </ToastProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }
