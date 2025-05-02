@@ -32,13 +32,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import { DateValue } from "@internationalized/date";
 
 export function AddHolidayDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [date, setDate] = useState<Date>();
+  const [date, setDate] = useState<{ start: DateValue; end: DateValue } | null>(
+    null
+  );
   const [type, setType] = useState("");
   const { toast } = useToast();
+
+  const formatDateRange = (
+    date: { start: DateValue; end: DateValue } | null
+  ) => {
+    if (!date) return "";
+    const startDate = new Date(date.start.toString());
+    const endDate = new Date(date.end.toString());
+
+    if (startDate.getTime() === endDate.getTime()) {
+      return format(startDate, "PPP");
+    }
+    return `${format(startDate, "PPP")} - ${format(endDate, "PPP")}`;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +79,7 @@ export function AddHolidayDialog({ children }: { children: React.ReactNode }) {
 
   const resetForm = () => {
     setName("");
-    setDate(undefined);
+    setDate(null);
     setType("");
   };
 
@@ -102,17 +118,15 @@ export function AddHolidayDialog({ children }: { children: React.ReactNode }) {
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : "Select date"}
+                    {date ? formatDateRange(date) : "Select date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                  {/* <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    initialFocus
-                  /> */}
-                  <Calendar />
+                  <Calendar
+                    value={date}
+                    onChange={(newDate) => setDate(newDate)}
+                    mode="range"
+                  />
                 </PopoverContent>
               </Popover>
             </div>

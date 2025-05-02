@@ -20,8 +20,8 @@ export default function HolidaysPage() {
   // Count upcoming holidays (from today)
   const today = new Date();
   const upcomingHolidays = holidays.filter((holiday) => {
-    const holidayDate = new Date(holiday.date);
-    return holidayDate >= today;
+    const holidayStartDate = new Date(holiday.date.start);
+    return holidayStartDate >= today;
   });
 
   // Get next holiday
@@ -88,7 +88,7 @@ export default function HolidaysPage() {
               </div>
               <p className="text-xs text-muted-foreground">
                 {nextHoliday
-                  ? new Date(nextHoliday.date).toLocaleDateString("en-US", {
+                  ? new Date(nextHoliday.date.start).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
                     })

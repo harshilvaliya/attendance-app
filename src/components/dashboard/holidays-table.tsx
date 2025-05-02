@@ -1,11 +1,18 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Pencil, Trash2 } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Pencil, Trash2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,68 +22,89 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 
 interface Holiday {
-  id: number
-  name: string
-  date: string
-  type: string
+  id: number;
+  name: string;
+  date: {
+    start: string;
+    end: string;
+  };
+  type: string;
 }
 
 interface HolidaysTableProps {
-  holidays: Holiday[]
+  holidays: Holiday[];
 }
 
-export function HolidaysTable({ holidays: initialHolidays }: HolidaysTableProps) {
-  const [holidays, setHolidays] = useState<Holiday[]>(initialHolidays)
-  const [deleteId, setDeleteId] = useState<number | null>(null)
-  const { toast } = useToast()
+export function HolidaysTable({
+  holidays: initialHolidays,
+}: HolidaysTableProps) {
+  const [holidays, setHolidays] = useState<Holiday[]>(initialHolidays);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const { toast } = useToast();
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", {
+  const formatDate = (date: { start: string; end: string }) => {
+    const startDate = new Date(date.start);
+    const endDate = new Date(date.end);
+    
+    if (startDate.getTime() === endDate.getTime()) {
+      return startDate.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+    }
+    
+    return `${startDate.toLocaleDateString("en-US", {
       weekday: "long",
       month: "long",
       day: "numeric",
       year: "numeric",
-    })
-  }
+    })} - ${endDate.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    })}`;
+  };
 
-  const isUpcoming = (dateString: string) => {
-    const today = new Date()
-    const holidayDate = new Date(dateString)
-    return holidayDate >= today
-  }
+  const isUpcoming = (date: { start: string; end: string }) => {
+    const today = new Date();
+    const holidayStartDate = new Date(date.start);
+    return holidayStartDate >= today;
+  };
 
   // Sort holidays by date
   const sortedHolidays = [...holidays].sort((a, b) => {
-    return new Date(a.date).getTime() - new Date(b.date).getTime()
-  })
+    return new Date(a.date.start).getTime() - new Date(b.date.start).getTime();
+  });
 
   const handleEdit = (id: number) => {
     toast({
       title: "Edit holiday",
       description: "This would open an edit dialog in a real application",
-    })
-  }
+    });
+  };
 
   const handleDelete = (id: number) => {
-    setDeleteId(id)
-  }
+    setDeleteId(id);
+  };
 
   const confirmDelete = () => {
     if (deleteId) {
-      setHolidays(holidays.filter((holiday) => holiday.id !== deleteId))
+      setHolidays(holidays.filter((holiday) => holiday.id !== deleteId));
 
       toast({
         title: "Holiday deleted",
         description: "The holiday has been removed from the calendar",
-      })
+      });
 
-      setDeleteId(null)
+      setDeleteId(null);
     }
-  }
+  };
 
   return (
     <>
@@ -116,7 +144,12 @@ export function HolidaysTable({ holidays: initialHolidays }: HolidaysTableProps)
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
-                    <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => handleEdit(holiday.id)}>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="h-8 w-8"
+                      onClick={() => handleEdit(holiday.id)}
+                    >
                       <Pencil className="h-4 w-4" />
                       <span className="sr-only">Edit</span>
                     </Button>
@@ -137,22 +170,29 @@ export function HolidaysTable({ holidays: initialHolidays }: HolidaysTableProps)
         </Table>
       </div>
 
-      <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
+      <AlertDialog
+        open={deleteId !== null}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the holiday from the calendar.
+              This action cannot be undone. This will permanently delete the
+              holiday from the calendar.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
-  )
+  );
 }
