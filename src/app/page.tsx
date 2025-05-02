@@ -1,25 +1,22 @@
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { OverviewCards } from "@/components/dashboard/overview-cards";
-import { ShortcutCards } from "@/components/dashboard/shortcut-cards";
+import Link from "next/link";
 
-export default function DashboardPage() {
+export default function Page() {
   return (
-    <DashboardShell>
-      <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight ">
-            Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            Overview of your HR management system
-          </p>
-        </div>
-        <OverviewCards />
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-          <ShortcutCards />
-        </div>
+    <div className="flex flex-col items-center justify-center min-h-screen gap-6">
+      <div className="flex flex-col gap-4">
+        <Link
+          href="/admin"
+          className="px-6 py-3 text-lg font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Admin Dashboard
+        </Link>
+        <Link
+          href="/user"
+          className="px-6 py-3 text-lg font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+        >
+          User Dashboard
+        </Link>
       </div>
-    </DashboardShell>
+    </div>
   );
 }
