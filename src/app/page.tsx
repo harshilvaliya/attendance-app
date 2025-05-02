@@ -11,7 +11,7 @@ export default function Page() {
           Admin Dashboard
         </Link>
         <Link
-          href="/user"
+          href="/user-leave"
           className="px-6 py-3 text-lg font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
         >
           User Dashboard
