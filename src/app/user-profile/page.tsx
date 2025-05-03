@@ -34,9 +34,8 @@ export default function ProfilePage() {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   const handleLogout = () => {
-    // In a real app, you would handle logout logic here
-    // For now, we'll just redirect to a hypothetical login page
-    router.push("/");
+    localStorage.removeItem("token");
+    router.push("/login");
   };
 
   return (

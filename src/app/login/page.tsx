@@ -1,12 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // ✅ Auto-redirect if token already exists
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      router.push("/user-leave"); // or any internal route you want
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,18 +39,13 @@ export default function LoginPage() {
         return;
       }
 
-      // ✅ Show alert on success
-      alert("Login successful!");
-
-      // ✅ Store token in localStorage
+      // ✅ Store token and redirect
       localStorage.setItem("token", data.details.token);
-
-      // ✅ Log response (optional)
+      alert("Login successful!");
       console.log("Login successful:", data);
 
-      // ✅ Optionally redirect after login
-      // window.location.href = "/dashboard";
-
+      // ✅ Redirect after login
+      router.push("/user-leave");
     } catch (err) {
       console.error("Error during login:", err);
       setError("Something went wrong");
@@ -90,9 +95,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {error && (
-            <p className="text-red-500 text-sm text-center">{error}</p>
-          )}
+          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
           <button
             type="submit"
