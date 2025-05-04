@@ -1,15 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // ✅ Auto-redirect if token already exists
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      router.push("/user-leave"); // or any internal route you want
+    }
+  }, [router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Static form submission - no backend integration yet
-    console.log("Login attempt with:", { email, password });
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || "Login failed");
+        return;
+      }
+
+      // ✅ Store token and redirect
+      localStorage.setItem("token", data.details.token);
+      alert("Login successful!");
+      console.log("Login successful:", data);
+
+      // ✅ Redirect after login
+      router.push("/user-leave");
+    } catch (err) {
+      console.error("Error during login:", err);
+      setError("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -29,11 +71,9 @@ export default function LoginPage() {
               </label>
               <input
                 id="email"
-                name="email"
                 type="email"
-                autoComplete="email"
                 required
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -45,11 +85,9 @@ export default function LoginPage() {
               </label>
               <input
                 id="password"
-                name="password"
                 type="password"
-                autoComplete="current-password"
                 required
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -57,11 +95,14 @@ export default function LoginPage() {
             </div>
           </div>
 
+          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+
           <button
             type="submit"
-            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:cursor-pointer"
+            disabled={loading}
+            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Sign in
+            {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
       </div>
