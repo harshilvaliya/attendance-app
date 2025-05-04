@@ -238,8 +238,8 @@ export default function LeavePage() {
                     <PopoverContent className="w-auto p-0">
                       <Calendar
                         mode="single"
-                        selected={fromDate}
-                        onSelect={setFromDate}
+                        date={fromDate}
+                        onDateChange={setFromDate}
                         initialFocus
                       />
                     </PopoverContent>
@@ -268,8 +268,8 @@ export default function LeavePage() {
                     <PopoverContent className="w-auto p-0">
                       <Calendar
                         mode="single"
-                        selected={toDate}
-                        onSelect={setToDate}
+                        date={toDate}
+                        onDateChange={setToDate}
                         initialFocus
                       />
                     </PopoverContent>

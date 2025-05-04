@@ -30,45 +30,130 @@ export default function HolidayPage() {
   );
 
   return (
-    <div className="container p-4 animate-fade-in">
-      <h1 className="text-2xl font-bold mb-6 tracking-tight">Holidays</h1>
-
-      <h2 className="text-lg font-semibold mb-4">Upcoming Holidays</h2>
-      <div className="space-y-3 mb-8">
-        {upcomingHolidays.length === 0 ? (
-          <p className="text-center py-4 text-muted-foreground">
-            No upcoming holidays
-          </p>
-        ) : (
-          upcomingHolidays.map((holiday, index) => (
-            <div
-              key={holiday.id}
-              className="animate-slide-up"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <HolidayCard holiday={holiday} />
-            </div>
-          ))
-        )}
+    <div className="container mx-auto px-4 sm:px-6 py-6 space-y-8 max-w-7xl min-h-screen">
+      <div className="space-y-2">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          Holidays
+        </h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
+          View upcoming and past holiday schedules
+        </p>
       </div>
 
-      <h2 className="text-lg font-semibold mb-4">Past Holidays</h2>
-      <div className="space-y-3">
-        {pastHolidays.length === 0 ? (
-          <p className="text-center py-4 text-muted-foreground">
-            No past holidays
-          </p>
-        ) : (
-          pastHolidays.map((holiday, index) => (
-            <div
-              key={holiday.id}
-              className="animate-slide-up"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <HolidayCard holiday={holiday} isPast />
-            </div>
-          ))
-        )}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Upcoming Holidays
+            </CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{upcomingHolidays.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Holidays remaining this year
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Past Holidays</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pastHolidays.length}</div>
+            <p className="text-xs text-muted-foreground">Holidays this year</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Upcoming Holidays</h2>
+        <div className="space-y-4">
+          {upcomingHolidays.length === 0 ? (
+            <Card className="shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="py-6">
+                <p className="text-center text-muted-foreground">
+                  No upcoming holidays
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            upcomingHolidays.map((holiday) => (
+              <Card
+                key={holiday.id}
+                className="shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+              >
+                <CardHeader className="py-3 flex flex-row items-center space-y-0">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                    <Calendar className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-base font-medium">
+                      {holiday.name}
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {new Date(holiday.date).toLocaleDateString(undefined, {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                    {Math.ceil(
+                      (new Date(holiday.date).getTime() -
+                        new Date().getTime()) /
+                        (1000 * 60 * 60 * 24)
+                    )}{" "}
+                    days
+                  </div>
+                </CardHeader>
+              </Card>
+            ))
+          )}
+        </div>
+
+        <h2 className="text-lg font-semibold pt-4">Past Holidays</h2>
+        <div className="space-y-4">
+          {pastHolidays.length === 0 ? (
+            <Card className="shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="py-6">
+                <p className="text-center text-muted-foreground">
+                  No past holidays
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            pastHolidays.map((holiday) => (
+              <Card
+                key={holiday.id}
+                className="shadow-sm hover:shadow-md transition-shadow overflow-hidden opacity-80"
+              >
+                <CardHeader className="py-3 flex flex-row items-center space-y-0">
+                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center mr-3">
+                    <Calendar className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-medium">
+                      {holiday.name}
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {new Date(holiday.date).toLocaleDateString(undefined, {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                </CardHeader>
+              </Card>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
