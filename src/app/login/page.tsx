@@ -44,8 +44,12 @@ export default function LoginPage() {
       alert("Login successful!");
       console.log("Login successful:", data);
 
-      // ✅ Redirect after login
-      router.push("/user-leave");
+      // ✅ Role-based redirect after login
+      if (data.details.role === "admin") {
+        router.push("/admin-dashboard");
+      } else {
+        router.push("/user-leave");
+      }
     } catch (err) {
       console.error("Error during login:", err);
       setError("Something went wrong");
