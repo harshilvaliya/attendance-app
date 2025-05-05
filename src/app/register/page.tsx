@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
@@ -12,6 +12,53 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hasPermission, setHasPermission] = useState(false);
+  const [stream, setStream] = useState(null);
+  const [selfieImage, setSelfieImage] = useState("");
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const startCamera = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false,
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        await videoRef.current.play();
+      }
+      setStream(mediaStream);
+      setHasPermission(true);
+    } catch (err) {
+      console.error("Camera access denied:", err);
+      setError("Camera access is required for registration");
+    }
+  };
+
+  const captureSelfie = () => {
+    if (!videoRef.current || !canvasRef.current || !stream) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d")?.drawImage(video, 0, 0);
+    const imageData = canvas.toDataURL("image/jpeg");
+    setSelfieImage(imageData);
+
+    // Stop camera after capture
+    stream.getTracks().forEach((track) => track.stop());
+    setHasPermission(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [stream]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,6 +67,12 @@ export default function RegisterPage() {
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
+
+    if (!selfieImage) {
+      setError("Please capture a selfie before registering");
       setLoading(false);
       return;
     }
@@ -38,6 +91,7 @@ export default function RegisterPage() {
             email,
             password,
             confirm_password: confirmPassword,
+            selfie: selfieImage,
           }),
         }
       );
@@ -139,6 +193,56 @@ export default function RegisterPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
+            </div>
+            <div className="selfie-capture space-y-4">
+              <label className="text-sm font-medium block">Selfie</label>
+              {!hasPermission ? (
+                <button
+                  type="button"
+                  onClick={startCamera}
+                  className="w-full rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/90"
+                >
+                  Enable Camera
+                </button>
+              ) : (
+                <div className="space-y-4">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full rounded-md"
+                    style={{ transform: "scaleX(-1)" }}
+                  />
+                  <canvas ref={canvasRef} style={{ display: "none" }} />
+                  <button
+                    type="button"
+                    onClick={captureSelfie}
+                    className="w-full rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/90"
+                  >
+                    Capture Selfie
+                  </button>
+                </div>
+              )}
+              {selfieImage && (
+                <div className="mt-4">
+                  <img
+                    src={selfieImage}
+                    alt="Captured selfie"
+                    className="w-full rounded-md"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelfieImage("");
+                      startCamera();
+                    }}
+                    className="mt-2 w-full rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/90"
+                  >
+                    Retake Selfie
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
