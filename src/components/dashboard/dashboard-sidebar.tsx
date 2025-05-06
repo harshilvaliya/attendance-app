@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
   Calendar,
@@ -27,6 +27,12 @@ export function DashboardSidebar({
   onOpenChange,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    router.push("/login");
+  };
 
   const routes = [
     {
@@ -67,6 +73,8 @@ export function DashboardSidebar({
     },
   ];
 
+   
+
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
@@ -77,17 +85,17 @@ export function DashboardSidebar({
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="p-0 w-[240px]">
-          <MobileSidebar routes={routes} />
+          <MobileSidebar routes={routes} onLogout={handleLogout} />
         </SheetContent>
       </Sheet>
       <aside className="hidden md:flex w-[240px] flex-col border-r bg-muted/40">
-        <DesktopSidebar routes={routes} />
+        <DesktopSidebar routes={routes} onLogout={handleLogout} />
       </aside>
     </>
   );
 }
 
-function MobileSidebar({ routes }: { routes: any[] }) {
+function MobileSidebar({ routes, onLogout }: { routes: any[]; onLogout: () => void }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-14 items-center border-b px-4">
@@ -116,7 +124,11 @@ function MobileSidebar({ routes }: { routes: any[] }) {
         </nav>
       </ScrollArea>
       <div className="border-t p-4">
-        <Button variant="outline" className="w-full justify-start gap-2">
+        <Button 
+          variant="outline" 
+          className="w-full justify-start gap-2"
+          onClick={onLogout}
+        >
           <LogOut className="h-4 w-4" />
           Logout
         </Button>
@@ -125,7 +137,7 @@ function MobileSidebar({ routes }: { routes: any[] }) {
   );
 }
 
-function DesktopSidebar({ routes }: { routes: any[] }) {
+function DesktopSidebar({ routes, onLogout }: { routes: any[]; onLogout: () => void }) {
   return (
     <div className="flex h-full flex-col ">
       <div className="flex h-14 items-center border-b px-4">
@@ -153,7 +165,11 @@ function DesktopSidebar({ routes }: { routes: any[] }) {
           ))}
         </nav>
         <div className="border-t p-4">
-          <Button variant="outline" className="w-full justify-start gap-2">
+          <Button 
+            variant="outline" 
+            className="w-full justify-start gap-2"
+            onClick={onLogout}
+          >
             <LogOut className="h-4 w-4" />
             Logout
           </Button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogOut, Mail, Phone, User, Building, Calendar } from "lucide-react";
@@ -17,20 +17,64 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-// Mock user data
-const userData = {
-  name: "John Doe",
-  email: "john.doe@example.com",
-  phone: "+1 (555) 123-4567",
-  department: "Engineering",
-  position: "Software Developer",
-  joinDate: "2022-01-15",
-  avatar: "/placeholder.svg?height=100&width=100",
-};
-
 export default function ProfilePage() {
   const router = useRouter();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/user/get-user`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        console.log(token);
+
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          router.push("/login");
+          return;
+        }
+
+        if (!response.ok) throw new Error("Failed to fetch user data");
+
+        const data = await response.json();
+        setUserData(data.data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [router]);
+
+  // Loading and error states
+  if (loading) {
+    return <div className="container text-center py-8">Loading...</div>;
+  }
+
+  if (error || !userData) {
+    return (
+      <div className="container text-center py-8 text-red-500">
+        Error: {error || "Failed to load user data"}
+      </div>
+    );
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -54,10 +98,18 @@ export default function ProfilePage() {
             <CardTitle className="text-sm font-medium">
               Account Status
             </CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
+            {userData.selfieUrl ? (
+              <img
+                src={userData.selfieUrl}
+                alt="Profile"
+                className="h-10 w-10 rounded-full object-cover"
+              />
+            ) : (
+              <User className="h-4 w-4 text-muted-foreground" />
+            )}
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{userData.name}</div>
+            <div className="text-2xl font-bold">{userData.username}</div>
             <p className="text-xs text-muted-foreground">{userData.position}</p>
           </CardContent>
         </Card>
@@ -105,7 +157,7 @@ export default function ProfilePage() {
               <div>
                 <p className="text-sm font-medium">Phone</p>
                 <p className="text-sm text-muted-foreground">
-                  {userData.phone}
+                  {userData.phoneNumber}
                 </p>
               </div>
             </div>
