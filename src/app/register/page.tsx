@@ -1,170 +1,13 @@
-// "use client";
-
-// import { useState } from "react";
-// import { useRouter } from "next/navigation";
-
-// export default function RegisterPage() {
-//   const router = useRouter();
-//   const [username, setUsername] = useState("");
-//   const [phoneNumber, setPhoneNumber] = useState("");
-//   const [email, setEmail] = useState("");
-//   const [password, setPassword] = useState("");
-//   const [confirmPassword, setConfirmPassword] = useState("");
-//   const [error, setError] = useState("");
-//   const [loading, setLoading] = useState(false);
-
-//   const handleSubmit = async (e: React.FormEvent) => {
-//     e.preventDefault();
-//     setError("");
-//     setLoading(true);
-
-//     if (password !== confirmPassword) {
-//       setError("Passwords do not match");
-//       setLoading(false);
-//       return;
-//     }
-
-//     try {
-//       const res = await fetch(
-//         `${process.env.NEXT_PUBLIC_API_URL}/user/register`,
-//         {
-//           method: "POST",
-//           headers: {
-//             "Content-Type": "application/json",
-//           },
-//           body: JSON.stringify({
-//             username,
-//             phoneNumber,
-//             email,
-//             password,
-//             confirm_password: confirmPassword,
-//           }),
-//         }
-//       );
-
-//       const data = await res.json();
-
-//       if (!res.ok) {
-//         setError(data.message || "Registration failed");
-//         return;
-//       }
-
-//       alert("Registration successful!");
-//       router.push("/login");
-//     } catch (err) {
-//       console.error("Error during registration:", err);
-//       setError("Something went wrong");
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   return (
-//     <div className="min-h-screen flex items-center justify-center bg-background">
-//       <div className="w-full max-w-md space-y-8 p-8">
-//         <div className="text-center">
-//           <h1 className="text-3xl font-bold tracking-tight">Create Account</h1>
-//           <p className="text-muted-foreground mt-2">
-//             Register to start managing your attendance
-//           </p>
-//         </div>
-//         <form className="space-y-6" onSubmit={handleSubmit}>
-//           <div className="space-y-4">
-//             <div>
-//               <label htmlFor="username" className="text-sm font-medium">
-//                 Username
-//               </label>
-//               <input
-//                 id="username"
-//                 type="text"
-//                 required
-//                 className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-//                 placeholder="Enter your username"
-//                 value={username}
-//                 onChange={(e) => setUsername(e.target.value)}
-//               />
-//             </div>
-//             <div>
-//               <label htmlFor="phoneNumber" className="text-sm font-medium">
-//                 Phone Number
-//               </label>
-//               <input
-//                 id="phoneNumber"
-//                 type="tel"
-//                 required
-//                 className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-//                 placeholder="Enter your phone number"
-//                 value={phoneNumber}
-//                 onChange={(e) => setPhoneNumber(e.target.value)}
-//               />
-//             </div>
-//             <div>
-//               <label htmlFor="email" className="text-sm font-medium">
-//                 Email
-//               </label>
-//               <input
-//                 id="email"
-//                 type="email"
-//                 required
-//                 className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-//                 placeholder="Enter your email"
-//                 value={email}
-//                 onChange={(e) => setEmail(e.target.value)}
-//               />
-//             </div>
-//             <div>
-//               <label htmlFor="password" className="text-sm font-medium">
-//                 Password
-//               </label>
-//               <input
-//                 id="password"
-//                 type="password"
-//                 required
-//                 className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-//                 placeholder="Enter your password"
-//                 value={password}
-//                 onChange={(e) => setPassword(e.target.value)}
-//               />
-//             </div>
-//             <div>
-//               <label htmlFor="confirmPassword" className="text-sm font-medium">
-//                 Confirm Password
-//               </label>
-//               <input
-//                 id="confirmPassword"
-//                 type="password"
-//                 required
-//                 className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-//                 placeholder="Confirm your password"
-//                 value={confirmPassword}
-//                 onChange={(e) => setConfirmPassword(e.target.value)}
-//               />
-//             </div>
-//           </div>
-
-//           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-//           <button
-//             type="submit"
-//             disabled={loading}
-//             className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-//           >
-//             {loading ? "Creating account..." : "Create Account"}
-//           </button>
-//         </form>
-//       </div>
-//     </div>
-//   );
-// }
-
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [form, setForm] = useState({
     username: "",
     phoneNumber: "",
@@ -173,33 +16,94 @@ export default function RegisterPage() {
     confirmPassword: "",
     selfie: null as File | null,
   });
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState({
+    username: "",
+    phoneNumber: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    selfie: "",
+  });
   const [loading, setLoading] = useState(false);
+
+  const validateField = (name: string, value: string) => {
+    switch (name) {
+      case "username":
+        if (value.length < 3 || value.length > 30) {
+          return "Username must be between 3 and 30 characters";
+        }
+        break;
+      case "phoneNumber":
+        if (!/^[0-9]{10}$/.test(value)) {
+          return "Phone number must be 10 digits";
+        }
+        break;
+      case "email":
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          return "Invalid email format";
+        }
+        break;
+      case "password":
+        if (
+          !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(
+            value
+          )
+        ) {
+          return "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character";
+        }
+        break;
+      case "confirmPassword":
+        if (value !== form.password) {
+          return "Passwords do not match";
+        }
+        break;
+    }
+    return "";
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, files } = e.target;
     if (name === "selfie" && files) {
       setForm((f) => ({ ...f, selfie: files[0] }));
+      setErrors((e) => ({
+        ...e,
+        selfie: files[0] ? "" : "Please upload a selfie",
+      }));
     } else {
       setForm((f) => ({ ...f, [name]: value }));
+      setErrors((e) => ({ ...e, [name]: validateField(name, value) }));
+      if (name === "password") {
+        setErrors((e) => ({
+          ...e,
+          confirmPassword: form.confirmPassword
+            ? validateField("confirmPassword", form.confirmPassword)
+            : "",
+        }));
+      }
     }
+  };
+
+  const isFormValid = () => {
+    return (
+      !Object.values(errors).some((error) => error !== "") &&
+      Object.entries(form).every(([key, value]) => {
+        if (key === "selfie") return value !== null;
+        return value !== "";
+      })
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    if (!isFormValid()) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please fix all errors before submitting",
+      });
+      return;
+    }
     setLoading(true);
-
-    if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
-      return;
-    }
-    if (!form.selfie) {
-      setError("Please upload a selfie");
-      setLoading(false);
-      return;
-    }
 
     try {
       const data = new FormData();
@@ -208,13 +112,13 @@ export default function RegisterPage() {
       data.append("email", form.email);
       data.append("password", form.password);
       data.append("confirm_password", form.confirmPassword);
-      data.append("selfie", form.selfie);
+      data.append("selfie", form.selfie!);
 
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/user/register`,
         {
           method: "POST",
-          body: data, // automatically sets multipart/form-data
+          body: data,
         }
       );
 
@@ -223,11 +127,18 @@ export default function RegisterPage() {
         throw new Error(result.message || "Registration failed");
       }
 
-      alert("Registration successful!");
+      toast({
+        title: "Success",
+        description: "Registration successful!",
+      });
       router.push("/login");
     } catch (err: any) {
       console.error("Error during registration:", err);
-      setError(err.message || "Something went wrong");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.message || "Something went wrong",
+      });
     } finally {
       setLoading(false);
     }
@@ -257,11 +168,17 @@ export default function RegisterPage() {
                 name="username"
                 type="text"
                 required
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                autoComplete="off"
+                className={`mt-1 block w-full rounded-md border ${
+                  errors.username ? "border-red-500" : "border-input"
+                } bg-background px-3 py-2 text-sm`}
                 placeholder="Enter your username"
                 value={form.username}
                 onChange={handleChange}
               />
+              {errors.username && (
+                <p className="text-red-500 text-xs mt-1">{errors.username}</p>
+              )}
             </div>
             <div>
               <label htmlFor="phoneNumber" className="text-sm font-medium">
@@ -272,11 +189,19 @@ export default function RegisterPage() {
                 name="phoneNumber"
                 type="tel"
                 required
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                autoComplete="off"
+                className={`mt-1 block w-full rounded-md border ${
+                  errors.phoneNumber ? "border-red-500" : "border-input"
+                } bg-background px-3 py-2 text-sm`}
                 placeholder="Enter your phone number"
                 value={form.phoneNumber}
                 onChange={handleChange}
               />
+              {errors.phoneNumber && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.phoneNumber}
+                </p>
+              )}
             </div>
             <div>
               <label htmlFor="email" className="text-sm font-medium">
@@ -287,11 +212,17 @@ export default function RegisterPage() {
                 name="email"
                 type="email"
                 required
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                autoComplete="off"
+                className={`mt-1 block w-full rounded-md border ${
+                  errors.email ? "border-red-500" : "border-input"
+                } bg-background px-3 py-2 text-sm`}
                 placeholder="Enter your email"
                 value={form.email}
                 onChange={handleChange}
               />
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+              )}
             </div>
             <div>
               <label htmlFor="password" className="text-sm font-medium">
@@ -302,11 +233,17 @@ export default function RegisterPage() {
                 name="password"
                 type="password"
                 required
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                autoComplete="off"
+                className={`mt-1 block w-full rounded-md border ${
+                  errors.password ? "border-red-500" : "border-input"
+                } bg-background px-3 py-2 text-sm`}
                 placeholder="Enter your password"
                 value={form.password}
                 onChange={handleChange}
               />
+              {errors.password && (
+                <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+              )}
             </div>
             <div>
               <label htmlFor="confirmPassword" className="text-sm font-medium">
@@ -317,11 +254,19 @@ export default function RegisterPage() {
                 name="confirmPassword"
                 type="password"
                 required
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                autoComplete="off"
+                className={`mt-1 block w-full rounded-md border ${
+                  errors.confirmPassword ? "border-red-500" : "border-input"
+                } bg-background px-3 py-2 text-sm`}
                 placeholder="Confirm your password"
                 value={form.confirmPassword}
                 onChange={handleChange}
               />
+              {errors.confirmPassword && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.confirmPassword}
+                </p>
+              )}
             </div>
 
             <div>
@@ -334,18 +279,26 @@ export default function RegisterPage() {
                 type="file"
                 accept="image/*"
                 required
+                autoComplete="off"
                 onChange={handleChange}
-                className="mt-1 block w-full"
+                className={`mt-1 block w-full ${
+                  errors.selfie ? "text-red-500" : ""
+                }`}
               />
+              {errors.selfie && (
+                <p className="text-red-500 text-xs mt-1">{errors.selfie}</p>
+              )}
             </div>
           </div>
 
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
           <button
             type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            disabled={loading || !isFormValid()}
+            className={`w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ${
+              !isFormValid()
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-primary/90"
+            }`}
           >
             {loading ? "Creating account..." : "Create Account"}
           </button>
