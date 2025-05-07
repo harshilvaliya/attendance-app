@@ -1,18 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,16 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import Calendar from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon, FileText, Plus } from "lucide-react";
-import { format } from "date-fns";
+
+import { FileText, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
+
+import { useState, FormEvent, ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
 
 interface Leave {
   id: number;
@@ -90,6 +77,178 @@ const leaveHistory: Leave[] = [
     reason: "Annual vacation",
   },
 ];
+
+interface LeaveFormData {
+  leaveType: string;
+  fromDate: string;
+  toDate: string;
+  reason: string;
+  document?: File;
+}
+
+function LeaveFormDialogContent({ onSuccess }: { onSuccess: () => void }) {
+  const router = useRouter();
+  const [formData, setFormData] = useState<LeaveFormData>({
+    leaveType: "",
+    fromDate: "",
+    toDate: "",
+    reason: "",
+  });
+  const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const leaveTypes = [
+    "Annual",
+    "Sick",
+    "Maternity",
+    "Paternity",
+    "Unpaid",
+    "Other",
+  ];
+
+  const handleInputChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFormData({
+        ...formData,
+        document: e.target.files[0],
+      });
+    }
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append("leaveType", formData.leaveType);
+      formDataToSend.append("fromDate", formData.fromDate);
+      formDataToSend.append("toDate", formData.toDate);
+      formDataToSend.append("reason", formData.reason);
+      if (formData.document) {
+        formDataToSend.append("document", formData.document);
+      }
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/leave-form`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: formDataToSend,
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to submit leave form");
+      }
+      setLoading(false);
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="leaveType">Leave Type</Label>
+        <Select
+          value={formData.leaveType}
+          onValueChange={(val) =>
+            setFormData((f) => ({ ...f, leaveType: val }))
+          }
+        >
+          <SelectTrigger id="leaveType" className="w-full">
+            <SelectValue placeholder="Select leave type" />
+          </SelectTrigger>
+          <SelectContent>
+            {leaveTypes.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="fromDate">From Date</Label>
+          <Input
+            id="fromDate"
+            name="fromDate"
+            type="date"
+            value={formData.fromDate}
+            onChange={handleInputChange}
+            required
+            min={new Date().toISOString().split("T")[0]}
+            className="w-full"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="toDate">To Date</Label>
+          <Input
+            id="toDate"
+            name="toDate"
+            type="date"
+            value={formData.toDate}
+            onChange={handleInputChange}
+            required
+            min={formData.fromDate}
+            className="w-full"
+          />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="reason">Reason</Label>
+        <Textarea
+          id="reason"
+          name="reason"
+          value={formData.reason}
+          onChange={handleInputChange}
+          required
+          minLength={10}
+          maxLength={500}
+          rows={4}
+          placeholder="Enter your reason (10-500 characters)"
+          className="w-full"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="document">Supporting Document (Optional)</Label>
+        <Input
+          id="document"
+          name="document"
+          type="file"
+          onChange={handleFileChange}
+          accept=".jpg,.jpeg,.png,.webp"
+          className="w-full"
+        />
+        <p className="text-sm text-muted-foreground mt-1">
+          Accepted formats: JPG, PNG, WebP
+        </p>
+      </div>
+      {error && (
+        <div className="p-3 bg-red-100 text-red-700 rounded-md text-sm">
+          {error}
+        </div>
+      )}
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? "Submitting..." : "Submit Leave Request"}
+      </Button>
+    </form>
+  );
+}
 
 export default function LeavePage() {
   const [open, setOpen] = useState(false);
@@ -182,134 +341,7 @@ export default function LeavePage() {
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px] w-[calc(100%-2rem)] p-4 sm:p-6 rounded-lg max-h-[90vh] overflow-y-auto">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <DialogHeader className="space-y-2 sticky top-0 bg-background pt-2">
-                <DialogTitle>Apply for Leave</DialogTitle>
-                <DialogDescription>
-                  Submit a new leave request for approval
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 overflow-y-auto">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="Enter your name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="type">Leave Type</Label>
-                  <Select value={leaveType} onValueChange={setLeaveType}>
-                    <SelectTrigger id="type">
-                      <SelectValue placeholder="Select leave type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sick">Sick Leave</SelectItem>
-                      <SelectItem value="vacation">Vacation</SelectItem>
-                      <SelectItem value="personal">Personal Leave</SelectItem>
-                      <SelectItem value="maternity">Maternity Leave</SelectItem>
-                      <SelectItem value="paternity">Paternity Leave</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label>From Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !fromDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {fromDate ? (
-                          format(fromDate, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        date={fromDate}
-                        onDateChange={setFromDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label>To Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !toDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {toDate ? (
-                          format(toDate, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        date={toDate}
-                        onDateChange={setToDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="reason">Reason for Leave</Label>
-                  <Textarea
-                    id="reason"
-                    placeholder="Enter the reason for your leave"
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="document">Upload Document</Label>
-                  <Input
-                    id="document"
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => setDocument(e.target.files?.[0])}
-                  />
-                </div>
-              </div>
-              <DialogFooter className="sm:flex-row flex-col gap-2 sticky bottom-0 bg-background pb-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full sm:w-auto"
-                  onClick={() => setOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" className="w-full sm:w-auto">
-                  Submit Request
-                </Button>
-              </DialogFooter>
-            </form>
+            <LeaveFormDialogContent onSuccess={() => setOpen(false)} />
           </DialogContent>
         </Dialog>
       </div>
