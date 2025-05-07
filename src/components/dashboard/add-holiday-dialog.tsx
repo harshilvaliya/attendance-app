@@ -1,166 +1,205 @@
 "use client";
-
-import type React from "react";
-
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, FormEvent } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import Calendar from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
-import { DateValue } from "@internationalized/date";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+
+interface HolidayFormData {
+  name: string;
+  startDate: string;
+  endDate?: string;
+  isDateRange: boolean;
+  type: "National" | "Religious" | "Regional" | "Corporate" | "Other";
+}
+
+const initialFormData: HolidayFormData = {
+  name: "",
+  startDate: "",
+  endDate: "",
+  isDateRange: false,
+  type: "Other",
+};
+
+const holidayTypes: HolidayFormData["type"][] = [
+  "National",
+  "Religious",
+  "Regional",
+  "Corporate",
+  "Other",
+];
 
 export function AddHolidayDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [date, setDate] = useState<{ start: DateValue; end: DateValue } | null>(
-    null
-  );
-  const [type, setType] = useState("");
-  const { toast } = useToast();
+  const [formData, setFormData] = useState(initialFormData);
+  const [message, setMessage] = useState<{
+    type: "error" | "success";
+    text: string;
+  } | null>(null);
 
-  const formatDateRange = (
-    date: { start: DateValue; end: DateValue } | null
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    if (!date) return "";
-    const startDate = new Date(date.start.toString());
-    const endDate = new Date(date.end.toString());
-
-    if (startDate.getTime() === endDate.getTime()) {
-      return format(startDate, "PPP");
-    }
-    return `${format(startDate, "PPP")} - ${format(endDate, "PPP")}`;
+    const { id, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [id]: type === "checkbox" ? checked : value,
+    }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
-    if (!name || !date || !type) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
+    setMessage(null);
+    const { name, startDate, endDate, isDateRange } = formData;
+    const sDate = new Date(startDate);
+    const eDate = endDate ? new Date(endDate) : null;
+    if (name.length < 3 || name.length > 50)
+      return setMessage({
+        type: "error",
+        text: "Name must be 3–50 characters",
       });
-      return;
+    if (isNaN(sDate.getTime()))
+      return setMessage({ type: "error", text: "Invalid start date" });
+    if (
+      isDateRange &&
+      (!endDate || isNaN(eDate!.getTime()) || eDate! < sDate)
+    ) {
+      return setMessage({ type: "error", text: "Invalid or earlier end date" });
     }
-
-    toast({
-      title: "Holiday added",
-      description: `${name} has been added to the holiday calendar`,
-    });
-
-    setOpen(false);
-    resetForm();
-  };
-
-  const resetForm = () => {
-    setName("");
-    setDate(null);
-    setType("");
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/holiday`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+          },
+          body: JSON.stringify(formData),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to add holiday");
+      setMessage({ type: "success", text: "Holiday added successfully" });
+      setFormData(initialFormData);
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Something went wrong",
+      });
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Add Holiday</DialogTitle>
-            <DialogDescription>
-              Add a new holiday to the company calendar
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Holiday Name</Label>
-              <Input
-                id="name"
-                placeholder="Enter holiday name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="date">Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="date"
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !date && "text-muted-foreground"
-                    )}
+      <DialogContent className="sm:max-w-[500px] w-[calc(100%-2rem)] p-4 sm:p-6 rounded-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Add New Holiday</DialogTitle>
+        </DialogHeader>
+        <Card className="shadow-none border-none">
+          <CardContent>
+            {message && (
+              <div
+                className={`mb-4 px-4 py-3 rounded ${
+                  message.type === "error"
+                    ? "bg-red-100 text-red-700"
+                    : "bg-green-100 text-green-700"
+                }`}
+              >
+                {message.text}
+              </div>
+            )}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label htmlFor="name" className="block text-sm font-medium">
+                  Holiday Name
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="type" className="block text-sm font-medium">
+                  Holiday Type
+                </label>
+                <select
+                  id="type"
+                  value={formData.type}
+                  onChange={handleChange}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  {holidayTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="startDate"
+                    className="block text-sm font-medium"
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? formatDateRange(date) : "Select date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    value={date}
-                    onChange={(newDate) => setDate(newDate)}
-                    mode="range"
+                    Start Date
+                  </label>
+                  <input
+                    id="startDate"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={handleChange}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    required
                   />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="type">Holiday Type</Label>
-              <Select value={type} onValueChange={setType}>
-                <SelectTrigger id="type">
-                  <SelectValue placeholder="Select holiday type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Federal Holiday">
-                    Federal Holiday
-                  </SelectItem>
-                  <SelectItem value="Company Holiday">
-                    Company Holiday
-                  </SelectItem>
-                  <SelectItem value="Observance">Observance</SelectItem>
-                  <SelectItem value="Special Event">Special Event</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit">Add Holiday</Button>
-          </DialogFooter>
-        </form>
+                </div>
+                {formData.isDateRange && (
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="endDate"
+                      className="block text-sm font-medium"
+                    >
+                      End Date
+                    </label>
+                    <input
+                      id="endDate"
+                      type="date"
+                      value={formData.endDate}
+                      onChange={handleChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center">
+                <input
+                  id="isDateRange"
+                  type="checkbox"
+                  checked={formData.isDateRange}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                />
+                <label htmlFor="isDateRange" className="ml-2 text-sm">
+                  Is Date Range?
+                </label>
+              </div>
+              <Button type="submit" className="w-full">
+                Add Holiday
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </DialogContent>
     </Dialog>
   );

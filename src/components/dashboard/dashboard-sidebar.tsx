@@ -38,7 +38,7 @@ export function DashboardSidebar({
     {
       label: "Dashboard",
       icon: Home,
-      href: "/",
+      href: "/admin-dashboard",
       active: pathname === "/",
     },
     {
@@ -73,8 +73,6 @@ export function DashboardSidebar({
     },
   ];
 
-   
-
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
@@ -95,13 +93,22 @@ export function DashboardSidebar({
   );
 }
 
-function MobileSidebar({ routes, onLogout }: { routes: any[]; onLogout: () => void }) {
+function MobileSidebar({
+  routes,
+  onLogout,
+}: {
+  routes: any[];
+  onLogout: () => void;
+}) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-14 items-center border-b px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
+        <Link
+          href="/admin-dashboard"
+          className="flex items-center gap-2 font-semibold"
+        >
           <Users className="h-6 w-6" />
-          <span>HR Admin</span>
+          <span>InfiniDev Admin</span>
         </Link>
       </div>
       <ScrollArea className="flex-1">
@@ -124,8 +131,8 @@ function MobileSidebar({ routes, onLogout }: { routes: any[]; onLogout: () => vo
         </nav>
       </ScrollArea>
       <div className="border-t p-4">
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="w-full justify-start gap-2"
           onClick={onLogout}
         >
@@ -137,13 +144,22 @@ function MobileSidebar({ routes, onLogout }: { routes: any[]; onLogout: () => vo
   );
 }
 
-function DesktopSidebar({ routes, onLogout }: { routes: any[]; onLogout: () => void }) {
+function DesktopSidebar({
+  routes,
+  onLogout,
+}: {
+  routes: any[];
+  onLogout: () => void;
+}) {
   return (
     <div className="flex h-full flex-col ">
       <div className="flex h-14 items-center border-b px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
+        <Link
+          href="/admin-dashboard"
+          className="flex items-center gap-2 font-semibold"
+        >
           <Users className="h-6 w-6" />
-          <span>HR Admin</span>
+          <span>InfiniDev Admin</span>
         </Link>
       </div>
       <ScrollArea className="flex-1">
@@ -165,8 +181,8 @@ function DesktopSidebar({ routes, onLogout }: { routes: any[]; onLogout: () => v
           ))}
         </nav>
         <div className="border-t p-4">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full justify-start gap-2"
             onClick={onLogout}
           >
