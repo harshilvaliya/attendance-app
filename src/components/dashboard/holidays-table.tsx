@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import {
   AlertDialog,
@@ -40,6 +40,9 @@ interface HolidaysTableProps {
   onHolidaysChange?: () => void;
 }
 
+type SortField = "name" | "date" | "type";
+type SortDirection = "asc" | "desc" | "default";
+
 export function HolidaysTable({
   holidays: initialHolidays,
   onHolidaysChange,
@@ -47,6 +50,8 @@ export function HolidaysTable({
   const [holidays, setHolidays] = useState<Holiday[]>(initialHolidays);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sortField, setSortField] = useState<SortField>("date");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("default");
   const { toast } = useToast();
 
   const formatDate = (date: { start: string; end: string }) => {
@@ -81,9 +86,61 @@ export function HolidaysTable({
     return holidayStartDate >= today;
   };
 
-  // Sort holidays by date
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Cycle through: default -> asc -> desc -> default
+      if (sortDirection === "default") {
+        setSortDirection("asc");
+      } else if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else {
+        setSortDirection("default");
+      }
+    } else {
+      // Set new field and default to default sorting
+      setSortField(field);
+      setSortDirection("default");
+    }
+  };
+
+  // Get sort icon based on current sort state
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    
+    if (sortDirection === "default") {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    
+    return sortDirection === "asc" ? (
+      <ArrowUp className="ml-2 h-4 w-4" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4" />
+    );
+  };
+
+  // Sort holidays based on current sort field and direction
   const sortedHolidays = [...holidays].sort((a, b) => {
-    return new Date(a.date.start).getTime() - new Date(b.date.start).getTime();
+    // If default sorting, return holidays as is (sorted by ID or original order)
+    if (sortDirection === "default") {
+      return 0; // No sorting applied
+    }
+    
+    const multiplier = sortDirection === "asc" ? 1 : -1;
+
+    switch (sortField) {
+      case "name":
+        return multiplier * a.name.localeCompare(b.name);
+      case "type":
+        return multiplier * a.type.localeCompare(b.type);
+      case "date":
+      default:
+        return (
+          multiplier *
+          (new Date(a.date.start).getTime() - new Date(b.date.start).getTime())
+        );
+    }
   });
 
   const handleDelete = (id: number) => {
@@ -126,7 +183,8 @@ export function HolidaysTable({
       } catch (error) {
         toast({
           title: "Error",
-          description: error instanceof Error ? error.message : "Failed to delete holiday",
+          description:
+            error instanceof Error ? error.message : "Failed to delete holiday",
           variant: "destructive",
         });
       } finally {
@@ -149,9 +207,36 @@ export function HolidaysTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Holiday Name</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Type</TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("name")}
+                  className="flex items-center p-0 font-medium"
+                >
+                  Holiday Name
+                  {getSortIcon("name")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("date")}
+                  className="flex items-center p-0 font-medium"
+                >
+                  Date
+                  {getSortIcon("date")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("type")}
+                  className="flex items-center p-0 font-medium"
+                >
+                  Type
+                  {getSortIcon("type")}
+                </Button>
+              </TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -181,15 +266,11 @@ export function HolidaysTable({
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
-                    <EditHolidayDialog 
-                      holiday={holiday} 
+                    <EditHolidayDialog
+                      holiday={holiday}
                       onHolidayUpdated={handleHolidayUpdated}
                     >
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-8 w-8"
-                      >
+                      <Button size="icon" variant="outline" className="h-8 w-8">
                         <Pencil className="h-4 w-4" />
                         <span className="sr-only">Edit</span>
                       </Button>

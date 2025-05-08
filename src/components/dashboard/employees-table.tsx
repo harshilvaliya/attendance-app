@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Pencil, Trash2, UserCircle } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, UserCircle, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,10 +47,15 @@ interface EmployeesTableProps {
   onDelete?: (id: string) => void;
 }
 
+type SortField = "name" | "position" | "department" | "joinDate" | "tenure" | "status";
+type SortDirection = "asc" | "desc" | "default";
+
 export function EmployeesTable({ employees: initialEmployees, onDelete }: EmployeesTableProps) {
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [viewEmployee, setViewEmployee] = useState<Employee | null>(null);
+  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("default");
   const { toast } = useToast();
 
   const formatDate = (dateString: string) => {
@@ -71,6 +76,73 @@ export function EmployeesTable({ employees: initialEmployees, onDelete }: Employ
 
     return years;
   };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Cycle through: default -> asc -> desc -> default
+      if (sortDirection === "default") {
+        setSortDirection("asc");
+      } else if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else {
+        setSortDirection("default");
+      }
+    } else {
+      // Set new field and default to default sorting
+      setSortField(field);
+      setSortDirection("default");
+    }
+  };
+
+  // Get sort icon based on current sort state
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    
+    if (sortDirection === "default") {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    
+    return sortDirection === "asc" ? (
+      <ArrowUp className="ml-2 h-4 w-4" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4" />
+    );
+  };
+
+  // Sort employees based on current sort field and direction
+  const sortedEmployees = [...employees].sort((a, b) => {
+    // If default sorting, return employees as is
+    if (sortDirection === "default") {
+      return 0; // No sorting applied
+    }
+    
+    const multiplier = sortDirection === "asc" ? 1 : -1;
+
+    switch (sortField) {
+      case "name":
+        return multiplier * a.name.localeCompare(b.name);
+      case "position":
+        return multiplier * a.position.localeCompare(b.position);
+      case "department":
+        return multiplier * a.department.localeCompare(b.department);
+      case "status":
+        return multiplier * a.status.localeCompare(b.status);
+      case "joinDate":
+        return (
+          multiplier *
+          (new Date(a.joinDate).getTime() - new Date(b.joinDate).getTime())
+        );
+      case "tenure":
+        return (
+          multiplier *
+          (calculateTenure(a.joinDate) - calculateTenure(b.joinDate))
+        );
+      default:
+        return 0;
+    }
+  });
 
   const handleEdit = (id: string) => {
     toast({
@@ -126,24 +198,78 @@ export function EmployeesTable({ employees: initialEmployees, onDelete }: Employ
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Position</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Join Date</TableHead>
-              <TableHead>Tenure</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("name")}
+                  className="flex items-center p-0 font-medium"
+                >
+                  Name
+                  {getSortIcon("name")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("position")}
+                  className="flex items-center p-0 font-medium"
+                >
+                  Position
+                  {getSortIcon("position")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("department")}
+                  className="flex items-center p-0 font-medium"
+                >
+                  Department
+                  {getSortIcon("department")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("joinDate")}
+                  className="flex items-center p-0 font-medium"
+                >
+                  Join Date
+                  {getSortIcon("joinDate")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("tenure")}
+                  className="flex items-center p-0 font-medium"
+                >
+                  Tenure
+                  {getSortIcon("tenure")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("status")}
+                  className="flex items-center p-0 font-medium"
+                >
+                  Status
+                  {getSortIcon("status")}
+                </Button>
+              </TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {employees.length === 0 ? (
+            {sortedEmployees.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-6">
                   No employees found
                 </TableCell>
               </TableRow>
             ) : (
-              employees.map((employee) => (
+              sortedEmployees.map((employee) => (
                 <TableRow key={employee.id}>
                   <TableCell className="font-medium">{employee.name}</TableCell>
                   <TableCell>{employee.position}</TableCell>

@@ -1,8 +1,18 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "lucide-react";
 import { useState, useEffect } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 interface Holiday {
@@ -15,10 +25,15 @@ interface Holiday {
   type?: string;
 }
 
+type SortField = "name" | "date" | "type";
+type SortDirection = "asc" | "desc" | "default";
+
 export default function HolidayPage() {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<SortField>("date");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("default");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,7 +65,7 @@ export default function HolidayPage() {
           startDate: holiday.startDate,
           endDate: holiday.endDate,
           isDateRange: holiday.isDateRange,
-          type: holiday.type
+          type: holiday.type || "General"
         }));
 
         setHolidays(formattedHolidays);
@@ -72,12 +87,92 @@ export default function HolidayPage() {
     fetchHolidays();
   }, [toast]);
 
-  // Sort holidays by date
-  const sortedHolidays = [...holidays].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+  // Helper function to format date display
+  const formatDate = (holiday: Holiday) => {
+    if (holiday.isDateRange && holiday.startDate && holiday.endDate) {
+      return `${new Date(holiday.startDate).toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+      })} - ${new Date(holiday.endDate).toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })}`;
+    }
+    
+    return new Date(holiday.date).toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
 
-  // Get upcoming holidays (from today)
+  const isUpcoming = (date: string) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const holidayDate = new Date(date);
+    return holidayDate >= today;
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Cycle through: default -> asc -> desc -> default
+      if (sortDirection === "default") {
+        setSortDirection("asc");
+      } else if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else {
+        setSortDirection("default");
+      }
+    } else {
+      // Set new field and default to asc sorting
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  // Get sort icon based on current sort state
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    
+    if (sortDirection === "default") {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    
+    return sortDirection === "asc" ? (
+      <ArrowUp className="ml-2 h-4 w-4" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4" />
+    );
+  };
+
+  // Sort holidays based on current sort field and direction
+  const sortedHolidays = [...holidays].sort((a, b) => {
+    // If default sorting, sort by date ascending
+    if (sortDirection === "default") {
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    }
+    
+    const multiplier = sortDirection === "asc" ? 1 : -1;
+
+    switch (sortField) {
+      case "name":
+        return multiplier * a.name.localeCompare(b.name);
+      case "type":
+        return multiplier * (a.type || "").localeCompare(b.type || "");
+      case "date":
+      default:
+        return (
+          multiplier *
+          (new Date(a.date).getTime() - new Date(b.date).getTime())
+        );
+    }
+  });
+
+  // Get upcoming and past holidays
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -88,25 +183,14 @@ export default function HolidayPage() {
     (holiday) => new Date(holiday.date) < today
   );
 
-  // Helper function to format date display
-  const formatDate = (holiday: Holiday) => {
-    if (holiday.isDateRange && holiday.startDate && holiday.endDate) {
-      return `${new Date(holiday.startDate).toLocaleDateString(undefined, {
-        month: "long",
-        day: "numeric",
-      })} - ${new Date(holiday.endDate).toLocaleDateString(undefined, {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      })}`;
-    }
-    
-    return new Date(holiday.date).toLocaleDateString(undefined, {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+  // Calculate days remaining
+  const getDaysRemaining = (date: string) => {
+    const holidayDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Math.ceil(
+      (holidayDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    );
   };
 
   return (
@@ -159,9 +243,9 @@ export default function HolidayPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Upcoming Holidays</h2>
+        <div className="space-y-8">
           <div className="space-y-4">
+            <h2 className="text-lg font-semibold">Upcoming Holidays</h2>
             {upcomingHolidays.length === 0 ? (
               <Card className="shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="py-6">
@@ -171,44 +255,68 @@ export default function HolidayPage() {
                 </CardContent>
               </Card>
             ) : (
-              upcomingHolidays.map((holiday) => (
-                <Card
-                  key={holiday.id}
-                  className="shadow-sm hover:shadow-md transition-shadow overflow-hidden"
-                >
-                  <CardHeader className="py-3 flex flex-row items-center space-y-0">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
-                      <Calendar className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-base font-medium">
-                        {holiday.name}
-                      </CardTitle>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {formatDate(holiday)}
-                      </p>
-                      {holiday.type && (
-                        <span className="inline-block px-2 py-0.5 mt-1 text-xs rounded-full bg-muted">
-                          {holiday.type}
-                        </span>
-                      )}
-                    </div>
-                    <div className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                      {Math.ceil(
-                        (new Date(holiday.date).getTime() -
-                          new Date().getTime()) /
-                          (1000 * 60 * 60 * 24)
-                      )}{" "}
-                      days
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort("name")}
+                          className="flex items-center p-0 font-medium"
+                        >
+                          Name
+                          {getSortIcon("name")}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort("date")}
+                          className="flex items-center p-0 font-medium"
+                        >
+                          Date
+                          {getSortIcon("date")}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort("type")}
+                          className="flex items-center p-0 font-medium"
+                        >
+                          Type
+                          {getSortIcon("type")}
+                        </Button>
+                      </TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {upcomingHolidays.map((holiday) => (
+                      <TableRow key={holiday.id}>
+                        <TableCell className="font-medium">{holiday.name}</TableCell>
+                        <TableCell>{formatDate(holiday)}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-primary/10 text-primary hover:bg-primary/10">
+                            {holiday.type || "General"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary w-fit">
+                            {getDaysRemaining(holiday.date)} days
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </div>
 
-          <h2 className="text-lg font-semibold pt-4">Past Holidays</h2>
           <div className="space-y-4">
+            <h2 className="text-lg font-semibold">Past Holidays</h2>
             {pastHolidays.length === 0 ? (
               <Card className="shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="py-6">
@@ -218,31 +326,57 @@ export default function HolidayPage() {
                 </CardContent>
               </Card>
             ) : (
-              pastHolidays.map((holiday) => (
-                <Card
-                  key={holiday.id}
-                  className="shadow-sm hover:shadow-md transition-shadow overflow-hidden opacity-80"
-                >
-                  <CardHeader className="py-3 flex flex-row items-center space-y-0">
-                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center mr-3">
-                      <Calendar className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base font-medium">
-                        {holiday.name}
-                      </CardTitle>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {formatDate(holiday)}
-                      </p>
-                      {holiday.type && (
-                        <span className="inline-block px-2 py-0.5 mt-1 text-xs rounded-full bg-muted">
-                          {holiday.type}
-                        </span>
-                      )}
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))
+              <div className="rounded-md border opacity-80">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort("name")}
+                          className="flex items-center p-0 font-medium"
+                        >
+                          Name
+                          {getSortIcon("name")}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort("date")}
+                          className="flex items-center p-0 font-medium"
+                        >
+                          Date
+                          {getSortIcon("date")}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort("type")}
+                          className="flex items-center p-0 font-medium"
+                        >
+                          Type
+                          {getSortIcon("type")}
+                        </Button>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pastHolidays.map((holiday) => (
+                      <TableRow key={holiday.id}>
+                        <TableCell className="font-medium">{holiday.name}</TableCell>
+                        <TableCell>{formatDate(holiday)}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-muted text-muted-foreground hover:bg-muted">
+                            {holiday.type || "General"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </div>
         </div>

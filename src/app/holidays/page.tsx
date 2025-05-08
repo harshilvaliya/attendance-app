@@ -180,9 +180,9 @@ export default function HolidaysPage() {
                   </CardHeader>
                   <CardContent className="overflow-x-auto p-0">
                     <div className="min-w-[320px]">
-                      <HolidaysTable 
-                        holidays={holidays} 
-                        onHolidaysChange={fetchHolidays} 
+                      <HolidaysTable
+                        holidays={holidays}
+                        onHolidaysChange={fetchHolidays}
                       />
                     </div>
                   </CardContent>
