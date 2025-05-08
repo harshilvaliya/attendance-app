@@ -36,56 +36,63 @@ export default function HolidayPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("default");
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchHolidays = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/user/holidays`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
+  const fetchHolidays = async (
+    field: SortField = sortField,
+    direction: SortDirection = sortDirection
+  ) => {
+    // setLoading(false);
+    try {
+      // Prepare sort parameters for API
+      const sortParam =
+        direction === "default" ? "" : `&sort=${field}&order=${direction}`;
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to fetch holidays");
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/holidays?${sortParam}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         }
+      );
 
-        const data = await response.json();
-        console.log("API Response:", data);
-
-        // Transform the data to match our interface
-        const formattedHolidays = data.data.map((holiday: any) => ({
-          id: holiday._id || holiday.id,
-          name: holiday.name,
-          date: holiday.startDate, // Use startDate as the primary date
-          startDate: holiday.startDate,
-          endDate: holiday.endDate,
-          isDateRange: holiday.isDateRange,
-          type: holiday.type || "General"
-        }));
-
-        setHolidays(formattedHolidays);
-        setError(null);
-      } catch (err) {
-        console.error("Error fetching holidays:", err);
-        setError(err instanceof Error ? err.message : "An error occurred");
-        toast({
-          title: "Error",
-          description:
-            err instanceof Error ? err.message : "Failed to fetch holidays",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to fetch holidays");
       }
-    };
 
+      const data = await response.json();
+      console.log("API Response:", data);
+
+      // Transform the data to match our interface
+      const formattedHolidays = data.data.map((holiday: any) => ({
+        id: holiday._id || holiday.id,
+        name: holiday.name,
+        date: holiday.startDate, // Use startDate as the primary date
+        startDate: holiday.startDate,
+        endDate: holiday.endDate,
+        isDateRange: holiday.isDateRange,
+        type: holiday.type || "General",
+      }));
+
+      setHolidays(formattedHolidays);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching holidays:", err);
+      setError(err instanceof Error ? err.message : "An error occurred");
+      toast({
+        title: "Error",
+        description:
+          err instanceof Error ? err.message : "Failed to fetch holidays",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchHolidays();
-  }, [toast]);
+  }, []);
 
   // Helper function to format date display
   const formatDate = (holiday: Holiday) => {
@@ -99,7 +106,7 @@ export default function HolidayPage() {
         year: "numeric",
       })}`;
     }
-    
+
     return new Date(holiday.date).toLocaleDateString("en-US", {
       weekday: "long",
       month: "long",
@@ -116,20 +123,25 @@ export default function HolidayPage() {
   };
 
   const handleSort = (field: SortField) => {
+    let newDirection: SortDirection = "asc";
+
     if (sortField === field) {
       // Cycle through: default -> asc -> desc -> default
       if (sortDirection === "default") {
-        setSortDirection("asc");
+        newDirection = "asc";
       } else if (sortDirection === "asc") {
-        setSortDirection("desc");
+        newDirection = "desc";
       } else {
-        setSortDirection("default");
+        newDirection = "default";
       }
-    } else {
-      // Set new field and default to asc sorting
-      setSortField(field);
-      setSortDirection("asc");
     }
+
+    // Update state
+    setSortField(field);
+    setSortDirection(newDirection);
+
+    // Fetch with new sort parameters
+    fetchHolidays(field, newDirection);
   };
 
   // Get sort icon based on current sort state
@@ -137,11 +149,11 @@ export default function HolidayPage() {
     if (sortField !== field) {
       return <ArrowUpDown className="ml-2 h-4 w-4" />;
     }
-    
+
     if (sortDirection === "default") {
       return <ArrowUpDown className="ml-2 h-4 w-4" />;
     }
-    
+
     return sortDirection === "asc" ? (
       <ArrowUp className="ml-2 h-4 w-4" />
     ) : (
@@ -149,37 +161,14 @@ export default function HolidayPage() {
     );
   };
 
-  // Sort holidays based on current sort field and direction
-  const sortedHolidays = [...holidays].sort((a, b) => {
-    // If default sorting, sort by date ascending
-    if (sortDirection === "default") {
-      return new Date(a.date).getTime() - new Date(b.date).getTime();
-    }
-    
-    const multiplier = sortDirection === "asc" ? 1 : -1;
-
-    switch (sortField) {
-      case "name":
-        return multiplier * a.name.localeCompare(b.name);
-      case "type":
-        return multiplier * (a.type || "").localeCompare(b.type || "");
-      case "date":
-      default:
-        return (
-          multiplier *
-          (new Date(a.date).getTime() - new Date(b.date).getTime())
-        );
-    }
-  });
-
   // Get upcoming and past holidays
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const upcomingHolidays = sortedHolidays.filter(
+  const upcomingHolidays = holidays.filter(
     (holiday) => new Date(holiday.date) >= today
   );
-  const pastHolidays = sortedHolidays.filter(
+  const pastHolidays = holidays.filter(
     (holiday) => new Date(holiday.date) < today
   );
 
@@ -295,10 +284,15 @@ export default function HolidayPage() {
                   <TableBody>
                     {upcomingHolidays.map((holiday) => (
                       <TableRow key={holiday.id}>
-                        <TableCell className="font-medium">{holiday.name}</TableCell>
+                        <TableCell className="font-medium">
+                          {holiday.name}
+                        </TableCell>
                         <TableCell>{formatDate(holiday)}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="bg-primary/10 text-primary hover:bg-primary/10">
+                          <Badge
+                            variant="outline"
+                            className="bg-primary/10 text-primary hover:bg-primary/10"
+                          >
                             {holiday.type || "General"}
                           </Badge>
                         </TableCell>
@@ -365,10 +359,15 @@ export default function HolidayPage() {
                   <TableBody>
                     {pastHolidays.map((holiday) => (
                       <TableRow key={holiday.id}>
-                        <TableCell className="font-medium">{holiday.name}</TableCell>
+                        <TableCell className="font-medium">
+                          {holiday.name}
+                        </TableCell>
                         <TableCell>{formatDate(holiday)}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="bg-muted text-muted-foreground hover:bg-muted">
+                          <Badge
+                            variant="outline"
+                            className="bg-muted text-muted-foreground hover:bg-muted"
+                          >
                             {holiday.type || "General"}
                           </Badge>
                         </TableCell>

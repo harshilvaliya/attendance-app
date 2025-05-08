@@ -29,24 +29,42 @@ interface Employee {
   selfieUrl?: string | null;
 }
 
+interface SortParams {
+  sortBy: string;
+  order: "asc" | "desc";
+}
+
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortParams, setSortParams] = useState<SortParams>({
+    sortBy: "createdAt",
+    order: "desc",
+  });
   const { toast } = useToast();
 
-  const fetchEmployees = async () => {
+  const fetchEmployees = async (search?: string) => {
     try {
-      setLoading(true);
+      // setLoading(true);
       const token = localStorage.getItem("token");
 
       if (!token) {
         throw new Error("Authentication token not found");
       }
 
+      // Build query string with sorting and search parameters
+      const queryParams = new URLSearchParams();
+      queryParams.append("sortBy", sortParams.sortBy);
+      queryParams.append("order", sortParams.order);
+      
+      if (search) {
+        queryParams.append("search", search);
+      }
+
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/get-users`,
+        `${process.env.NEXT_PUBLIC_API_URL}/user/get-users?${queryParams.toString()}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -63,7 +81,6 @@ export default function EmployeesPage() {
       console.log("API Response:", data);
 
       // Transform the data to match the expected format
-      // The users array is in data.users, not data.data
       const formattedEmployees = data.data.users.map((user: any) => ({
         id: user._id,
         name: user.username,
@@ -87,8 +104,21 @@ export default function EmployeesPage() {
   };
 
   useEffect(() => {
-    fetchEmployees();
-  }, []);
+    fetchEmployees(searchTerm);
+  }, [sortParams, searchTerm]);
+
+  // Function to handle sorting
+  const handleSort = (field: string, direction: string) => {
+    setSortParams({
+      sortBy: field,
+      order: direction as "asc" | "desc",
+    });
+  };
+
+  // Function to handle search
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
 
   // Function to delete an employee
   const handleDeleteEmployee = async (id: string) => {
@@ -134,14 +164,6 @@ export default function EmployeesPage() {
       });
     }
   };
-
-  // Filter employees based on search term
-  const filteredEmployees = employees.filter(
-    (employee) =>
-      employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.position.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   // Count employees by department
   const departmentCounts = employees.reduce((acc, employee) => {
@@ -210,7 +232,7 @@ export default function EmployeesPage() {
                 placeholder="Search employees..."
                 className="w-full pl-8 md:w-[300px]"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearch}
               />
             </div>
             <AddEmployeeDialog>
@@ -273,8 +295,11 @@ export default function EmployeesPage() {
           </CardHeader>
           <CardContent>
             <EmployeesTable 
-              employees={filteredEmployees} 
+              employees={employees} 
               onDelete={handleDeleteEmployee}
+              onSort={handleSort}
+              currentSortField={sortParams.sortBy}
+              currentSortOrder={sortParams.order}
             />
           </CardContent>
         </Card>

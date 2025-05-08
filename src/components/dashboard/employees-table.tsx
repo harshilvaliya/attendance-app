@@ -45,17 +45,22 @@ interface Employee {
 interface EmployeesTableProps {
   employees: Employee[];
   onDelete?: (id: string) => void;
+  onSort?: (field: string, direction: string) => void;
+  currentSortField?: string;
+  currentSortOrder?: string;
 }
 
 type SortField = "name" | "position" | "department" | "joinDate" | "tenure" | "status";
-type SortDirection = "asc" | "desc" | "default";
 
-export function EmployeesTable({ employees: initialEmployees, onDelete }: EmployeesTableProps) {
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+export function EmployeesTable({ 
+  employees, 
+  onDelete, 
+  onSort,
+  currentSortField = "",
+  currentSortOrder = "desc"
+}: EmployeesTableProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [viewEmployee, setViewEmployee] = useState<Employee | null>(null);
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("default");
   const { toast } = useToast();
 
   const formatDate = (dateString: string) => {
@@ -78,71 +83,54 @@ export function EmployeesTable({ employees: initialEmployees, onDelete }: Employ
   };
 
   const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      // Cycle through: default -> asc -> desc -> default
-      if (sortDirection === "default") {
-        setSortDirection("asc");
-      } else if (sortDirection === "asc") {
-        setSortDirection("desc");
-      } else {
-        setSortDirection("default");
-      }
-    } else {
-      // Set new field and default to default sorting
-      setSortField(field);
-      setSortDirection("default");
+    if (!onSort) return;
+
+    // Map frontend field names to backend field names
+    const fieldMapping: Record<SortField, string> = {
+      name: "username",
+      position: "position",
+      department: "department",
+      joinDate: "createdAt",
+      tenure: "createdAt", // Backend doesn't have tenure, use createdAt
+      status: "deletedAt", // Use deletedAt to determine status
+    };
+
+    const backendField = fieldMapping[field];
+
+    // Determine the new sort direction
+    let newDirection = "asc";
+    if (currentSortField === backendField) {
+      newDirection = currentSortOrder === "asc" ? "desc" : "asc";
     }
+
+    // Call the parent's sort handler
+    onSort(backendField, newDirection);
   };
 
   // Get sort icon based on current sort state
   const getSortIcon = (field: SortField) => {
-    if (sortField !== field) {
+    // Map frontend field names to backend field names
+    const fieldMapping: Record<SortField, string> = {
+      name: "username",
+      position: "position",
+      department: "department",
+      joinDate: "createdAt",
+      tenure: "createdAt",
+      status: "deletedAt",
+    };
+
+    const backendField = fieldMapping[field];
+
+    if (currentSortField !== backendField) {
       return <ArrowUpDown className="ml-2 h-4 w-4" />;
     }
     
-    if (sortDirection === "default") {
-      return <ArrowUpDown className="ml-2 h-4 w-4" />;
-    }
-    
-    return sortDirection === "asc" ? (
+    return currentSortOrder === "asc" ? (
       <ArrowUp className="ml-2 h-4 w-4" />
     ) : (
       <ArrowDown className="ml-2 h-4 w-4" />
     );
   };
-
-  // Sort employees based on current sort field and direction
-  const sortedEmployees = [...employees].sort((a, b) => {
-    // If default sorting, return employees as is
-    if (sortDirection === "default") {
-      return 0; // No sorting applied
-    }
-    
-    const multiplier = sortDirection === "asc" ? 1 : -1;
-
-    switch (sortField) {
-      case "name":
-        return multiplier * a.name.localeCompare(b.name);
-      case "position":
-        return multiplier * a.position.localeCompare(b.position);
-      case "department":
-        return multiplier * a.department.localeCompare(b.department);
-      case "status":
-        return multiplier * a.status.localeCompare(b.status);
-      case "joinDate":
-        return (
-          multiplier *
-          (new Date(a.joinDate).getTime() - new Date(b.joinDate).getTime())
-        );
-      case "tenure":
-        return (
-          multiplier *
-          (calculateTenure(a.joinDate) - calculateTenure(b.joinDate))
-        );
-      default:
-        return 0;
-    }
-  });
 
   const handleEdit = (id: string) => {
     toast({
@@ -160,14 +148,6 @@ export function EmployeesTable({ employees: initialEmployees, onDelete }: Employ
       if (onDelete) {
         // Use the provided onDelete function if available
         onDelete(deleteId);
-      } else {
-        // Otherwise, just update the local state
-        setEmployees(employees.filter((employee) => employee.id !== deleteId));
-        
-        toast({
-          title: "Employee deleted",
-          description: "The employee has been removed from the directory",
-        });
       }
 
       setDeleteId(null);
@@ -262,14 +242,14 @@ export function EmployeesTable({ employees: initialEmployees, onDelete }: Employ
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedEmployees.length === 0 ? (
+            {employees.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-6">
                   No employees found
                 </TableCell>
               </TableRow>
             ) : (
-              sortedEmployees.map((employee) => (
+              employees.map((employee) => (
                 <TableRow key={employee.id}>
                   <TableCell className="font-medium">{employee.name}</TableCell>
                   <TableCell>{employee.position}</TableCell>

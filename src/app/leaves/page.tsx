@@ -31,6 +31,11 @@ interface LeaveData {
   rejected: LeaveRequest[];
 }
 
+interface SortParams {
+  sortBy: string;
+  order: "asc" | "desc";
+}
+
 const mapLeaveData = (data: any[]): LeaveRequest[] =>
   data.map((l: any) => ({
     id: l._id,
@@ -50,16 +55,21 @@ export default function LeavesPage() {
     rejected: [],
   });
   const [loading, setLoading] = useState(false);
+  const [sortParams, setSortParams] = useState<SortParams>({
+    sortBy: "createdAt",
+    order: "desc",
+  });
   const { toast } = useToast();
 
   const fetchLeaveRequests = useCallback(async () => {
-    setLoading(true);
+    // setLoading(true);
     try {
       const token =
         typeof window !== "undefined" ? localStorage.getItem("token") : "";
 
+      // Add sort parameters to the API request
       const res = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/all-leave-forms`,
+        `${process.env.NEXT_PUBLIC_API_URL}/user/all-leave-forms?sortBy=${sortParams.sortBy}&order=${sortParams.order}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -82,11 +92,19 @@ export default function LeavesPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, sortParams]);
 
   useEffect(() => {
     fetchLeaveRequests();
   }, [fetchLeaveRequests]);
+
+  // Handle sorting from the table component
+  const handleSort = (field: string, direction: string) => {
+    setSortParams({
+      sortBy: field,
+      order: direction as "asc" | "desc",
+    });
+  };
 
   return (
     <DashboardShell>
@@ -161,6 +179,7 @@ export default function LeavesPage() {
                   requests={leaveData.pending}
                   loading={loading}
                   onAction={fetchLeaveRequests}
+                  onSort={handleSort}
                 />
               </CardContent>
             </Card>
@@ -177,6 +196,7 @@ export default function LeavesPage() {
                 <LeaveRequestsTable
                   requests={leaveData.approved}
                   loading={loading}
+                  onSort={handleSort}
                 />
               </CardContent>
             </Card>
@@ -193,6 +213,7 @@ export default function LeavesPage() {
                 <LeaveRequestsTable
                   requests={leaveData.rejected}
                   loading={loading}
+                  onSort={handleSort}
                 />
               </CardContent>
             </Card>

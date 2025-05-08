@@ -38,20 +38,22 @@ interface Holiday {
 interface HolidaysTableProps {
   holidays: Holiday[];
   onHolidaysChange?: () => void;
+  onSortChange?: (field: string, direction: string) => void;
+  currentSortField?: string;
+  currentSortOrder?: string;
 }
 
 type SortField = "name" | "date" | "type";
-type SortDirection = "asc" | "desc" | "default";
 
 export function HolidaysTable({
-  holidays: initialHolidays,
+  holidays,
   onHolidaysChange,
+  onSortChange,
+  currentSortField = "startDate",
+  currentSortOrder = "desc",
 }: HolidaysTableProps) {
-  const [holidays, setHolidays] = useState<Holiday[]>(initialHolidays);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [sortField, setSortField] = useState<SortField>("date");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("default");
   const { toast } = useToast();
 
   const formatDate = (date: { start: string; end: string }) => {
@@ -86,62 +88,50 @@ export function HolidaysTable({
     return holidayStartDate >= today;
   };
 
+  // Handle sort click
   const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      // Cycle through: default -> asc -> desc -> default
-      if (sortDirection === "default") {
-        setSortDirection("asc");
-      } else if (sortDirection === "asc") {
-        setSortDirection("desc");
-      } else {
-        setSortDirection("default");
-      }
-    } else {
-      // Set new field and default to default sorting
-      setSortField(field);
-      setSortDirection("default");
+    if (!onSortChange) return;
+
+    // Map frontend field names to backend field names
+    const fieldMapping: Record<SortField, string> = {
+      name: "name",
+      date: "startDate",
+      type: "type",
+    };
+
+    const backendField = fieldMapping[field];
+
+    // Determine the new sort direction
+    let newDirection = "asc";
+    if (currentSortField === backendField) {
+      newDirection = currentSortOrder === "asc" ? "desc" : "asc";
     }
+
+    // Call the parent's sort handler
+    onSortChange(backendField, newDirection);
   };
 
   // Get sort icon based on current sort state
   const getSortIcon = (field: SortField) => {
-    if (sortField !== field) {
+    // Map frontend field names to backend field names
+    const fieldMapping: Record<SortField, string> = {
+      name: "name",
+      date: "startDate",
+      type: "type",
+    };
+
+    const backendField = fieldMapping[field];
+
+    if (currentSortField !== backendField) {
       return <ArrowUpDown className="ml-2 h-4 w-4" />;
     }
-    
-    if (sortDirection === "default") {
-      return <ArrowUpDown className="ml-2 h-4 w-4" />;
-    }
-    
-    return sortDirection === "asc" ? (
+
+    return currentSortOrder === "asc" ? (
       <ArrowUp className="ml-2 h-4 w-4" />
     ) : (
       <ArrowDown className="ml-2 h-4 w-4" />
     );
   };
-
-  // Sort holidays based on current sort field and direction
-  const sortedHolidays = [...holidays].sort((a, b) => {
-    // If default sorting, return holidays as is (sorted by ID or original order)
-    if (sortDirection === "default") {
-      return 0; // No sorting applied
-    }
-    
-    const multiplier = sortDirection === "asc" ? 1 : -1;
-
-    switch (sortField) {
-      case "name":
-        return multiplier * a.name.localeCompare(b.name);
-      case "type":
-        return multiplier * a.type.localeCompare(b.type);
-      case "date":
-      default:
-        return (
-          multiplier *
-          (new Date(a.date.start).getTime() - new Date(b.date.start).getTime())
-        );
-    }
-  });
 
   const handleDelete = (id: number) => {
     setDeleteId(id);
@@ -167,9 +157,6 @@ export function HolidaysTable({
         if (!response.ok) {
           throw new Error(data.message || "Failed to delete holiday");
         }
-
-        // Update local state
-        setHolidays(holidays.filter((holiday) => holiday.id !== deleteId));
 
         toast({
           title: "Holiday deleted",
@@ -242,7 +229,7 @@ export function HolidaysTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedHolidays.map((holiday) => (
+            {holidays.map((holiday) => (
               <TableRow key={holiday.id}>
                 <TableCell className="font-medium">{holiday.name}</TableCell>
                 <TableCell>{formatDate(holiday.date)}</TableCell>

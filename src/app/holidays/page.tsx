@@ -20,6 +20,10 @@ export default function HolidaysPage() {
   const [holidays, setHolidays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sortBy, setSortBy] = useState("startDate");
+  const [order, setOrder] = useState("desc");
+  const [search, setSearch] = useState("");
+  const [type, setType] = useState("");
 
   const fetchHolidays = async () => {
     try {
@@ -27,8 +31,15 @@ export default function HolidaysPage() {
       // Get the token from localStorage or wherever you store it
       const token = localStorage.getItem("token");
 
+      // Build query parameters for sorting and filtering
+      const queryParams = new URLSearchParams();
+      if (sortBy) queryParams.append("sortBy", sortBy);
+      if (order) queryParams.append("order", order);
+      if (search) queryParams.append("search", search);
+      if (type) queryParams.append("type", type);
+
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/admin/holidays`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/holidays?${queryParams}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -63,9 +74,22 @@ export default function HolidaysPage() {
     }
   };
 
+  // Function to handle sorting changes
+  const handleSortChange = (field, direction) => {
+    // Map frontend field names to backend field names
+    const fieldMapping = {
+      name: "name",
+      date: "startDate",
+      type: "type"
+    };
+    
+    setSortBy(fieldMapping[field] || "startDate");
+    setOrder(direction);
+  };
+
   useEffect(() => {
     fetchHolidays();
-  }, []);
+  }, [sortBy, order, search, type]);
 
   // Count upcoming holidays (from today)
   const today = new Date();
@@ -183,6 +207,9 @@ export default function HolidaysPage() {
                       <HolidaysTable
                         holidays={holidays}
                         onHolidaysChange={fetchHolidays}
+                        onSortChange={handleSortChange}
+                        currentSortField={sortBy}
+                        currentSortOrder={order}
                       />
                     </div>
                   </CardContent>
