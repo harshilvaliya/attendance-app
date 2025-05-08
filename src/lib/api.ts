@@ -76,7 +76,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
 
     const holidaysData = await holidaysResponse.json();
     const today = new Date();
-    
+
     // Filter upcoming holidays
     const upcomingHolidaysList = holidaysData.data
       .filter((holiday: any) => {
@@ -84,14 +84,19 @@ export async function fetchDashboardData(): Promise<DashboardData> {
         return holidayDate >= today;
       })
       .sort((a: any, b: any) => {
-        return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+        return (
+          new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+        );
       });
 
     const upcomingHolidays = {
       count: upcomingHolidaysList.length,
-      next: upcomingHolidaysList.length > 0 
-        ? `${upcomingHolidaysList[0].name} (${new Date(upcomingHolidaysList[0].startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`
-        : "None",
+      next:
+        upcomingHolidaysList.length > 0
+          ? `${upcomingHolidaysList[0].name} (${new Date(
+              upcomingHolidaysList[0].startDate
+            ).toLocaleDateString("en-US", { month: "short", day: "numeric" })})`
+          : "None",
     };
 
     // For attendance, we would need an API endpoint to get today's attendance

@@ -73,9 +73,13 @@ export function OverviewCards() {
           <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{dashboardData.totalEmployees}</div>
+          <div className="text-2xl font-bold">
+            {dashboardData.totalEmployees}
+          </div>
           <p className="text-xs text-muted-foreground">
-            {dashboardData.totalEmployees > 100 ? "Large organization" : "Small team"}
+            {dashboardData.totalEmployees > 100
+              ? "Large organization"
+              : "Small team"}
           </p>
         </CardContent>
       </Card>
@@ -89,7 +93,8 @@ export function OverviewCards() {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {dashboardData.attendanceToday.present}/{dashboardData.attendanceToday.total}
+            {dashboardData.attendanceToday.present}/
+            {dashboardData.attendanceToday.total}
           </div>
           <p className="text-xs text-muted-foreground">
             {dashboardData.attendanceToday.absent} employees absent
@@ -103,7 +108,9 @@ export function OverviewCards() {
           <FileText className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{dashboardData.pendingLeaves}</div>
+          <div className="text-2xl font-bold">
+            {dashboardData.pendingLeaves}
+          </div>
           <p className="text-xs text-muted-foreground">
             Requires your approval
           </p>
@@ -118,7 +125,9 @@ export function OverviewCards() {
           <Clock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{dashboardData.upcomingHolidays.count}</div>
+          <div className="text-2xl font-bold">
+            {dashboardData.upcomingHolidays.count}
+          </div>
           <p className="text-xs text-muted-foreground">
             Next: {dashboardData.upcomingHolidays.next}
           </p>

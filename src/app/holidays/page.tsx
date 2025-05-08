@@ -21,49 +21,49 @@ export default function HolidaysPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchHolidays = async () => {
-      try {
-        setLoading(true);
-        // Get the token from localStorage or wherever you store it
-        const token = localStorage.getItem("token");
+  const fetchHolidays = async () => {
+    try {
+      setLoading(true);
+      // Get the token from localStorage or wherever you store it
+      const token = localStorage.getItem("token");
 
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/admin/holidays`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch holidays");
-        }
-
-        const data = await response.json();
-
-        // Transform the data to match the expected format
-        const formattedHolidays = data.data.map((holiday) => ({
-          id: holiday._id,
-          name: holiday.name,
-          date: {
-            start: holiday.startDate,
-            end: holiday.endDate || holiday.startDate,
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/holidays`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
-          type: holiday.type,
-        }));
+        }
+      );
 
-        setHolidays(formattedHolidays);
-      } catch (err) {
-        console.error("Error fetching holidays:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error("Failed to fetch holidays");
       }
-    };
 
+      const data = await response.json();
+
+      // Transform the data to match the expected format
+      const formattedHolidays = data.data.map((holiday) => ({
+        id: holiday._id,
+        name: holiday.name,
+        date: {
+          start: holiday.startDate,
+          end: holiday.endDate || holiday.startDate,
+        },
+        type: holiday.type,
+      }));
+
+      setHolidays(formattedHolidays);
+    } catch (err) {
+      console.error("Error fetching holidays:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchHolidays();
   }, []);
 
@@ -180,7 +180,10 @@ export default function HolidaysPage() {
                   </CardHeader>
                   <CardContent className="overflow-x-auto p-0">
                     <div className="min-w-[320px]">
-                      <HolidaysTable holidays={holidays} />
+                      <HolidaysTable 
+                        holidays={holidays} 
+                        onHolidaysChange={fetchHolidays} 
+                      />
                     </div>
                   </CardContent>
                 </Card>

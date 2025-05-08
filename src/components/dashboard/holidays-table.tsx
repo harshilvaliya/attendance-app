@@ -23,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { EditHolidayDialog } from "./edit-holiday-dialog";
 
 interface Holiday {
   id: number;
@@ -36,13 +37,16 @@ interface Holiday {
 
 interface HolidaysTableProps {
   holidays: Holiday[];
+  onHolidaysChange?: () => void;
 }
 
 export function HolidaysTable({
   holidays: initialHolidays,
+  onHolidaysChange,
 }: HolidaysTableProps) {
   const [holidays, setHolidays] = useState<Holiday[]>(initialHolidays);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   const formatDate = (date: { start: string; end: string }) => {
@@ -82,27 +86,60 @@ export function HolidaysTable({
     return new Date(a.date.start).getTime() - new Date(b.date.start).getTime();
   });
 
-  const handleEdit = (id: number) => {
-    toast({
-      title: "Edit holiday",
-      description: "This would open an edit dialog in a real application",
-    });
-  };
-
   const handleDelete = (id: number) => {
     setDeleteId(id);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteId) {
-      setHolidays(holidays.filter((holiday) => holiday.id !== deleteId));
+      setIsDeleting(true);
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/admin/holiday/${deleteId}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
-      toast({
-        title: "Holiday deleted",
-        description: "The holiday has been removed from the calendar",
-      });
+        const data = await response.json();
 
-      setDeleteId(null);
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to delete holiday");
+        }
+
+        // Update local state
+        setHolidays(holidays.filter((holiday) => holiday.id !== deleteId));
+
+        toast({
+          title: "Holiday deleted",
+          description: "The holiday has been removed from the calendar",
+        });
+
+        // Call the parent callback if provided
+        if (onHolidaysChange) {
+          onHolidaysChange();
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to delete holiday",
+          variant: "destructive",
+        });
+      } finally {
+        setIsDeleting(false);
+        setDeleteId(null);
+      }
+    }
+  };
+
+  const handleHolidayUpdated = () => {
+    // Call the parent callback if provided
+    if (onHolidaysChange) {
+      onHolidaysChange();
     }
   };
 
@@ -144,15 +181,19 @@ export function HolidaysTable({
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="h-8 w-8"
-                      onClick={() => handleEdit(holiday.id)}
+                    <EditHolidayDialog 
+                      holiday={holiday} 
+                      onHolidayUpdated={handleHolidayUpdated}
                     >
-                      <Pencil className="h-4 w-4" />
-                      <span className="sr-only">Edit</span>
-                    </Button>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Edit</span>
+                      </Button>
+                    </EditHolidayDialog>
                     <Button
                       size="icon"
                       variant="outline"
@@ -187,8 +228,9 @@ export function HolidaysTable({
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700"
+              disabled={isDeleting}
             >
-              Delete
+              {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
