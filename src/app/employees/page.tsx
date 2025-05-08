@@ -14,6 +14,7 @@ import { PlusCircle, Search } from "lucide-react";
 import { EmployeesTable } from "@/components/dashboard/employees-table";
 import { Input } from "@/components/ui/input";
 import { AddEmployeeDialog } from "@/components/dashboard/add-employee-dialog";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Employee {
   id: string;
@@ -33,60 +34,106 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const { toast } = useToast();
+
+  const fetchEmployees = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        throw new Error("Authentication token not found");
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/get-users`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch employees");
+      }
+
+      const data = await response.json();
+      console.log("API Response:", data);
+
+      // Transform the data to match the expected format
+      // The users array is in data.users, not data.data
+      const formattedEmployees = data.data.users.map((user: any) => ({
+        id: user._id,
+        name: user.username,
+        position: user.position || "Employee",
+        department: user.department || "General",
+        joinDate: user.createdAt || new Date().toISOString(),
+        status: user.deletedAt ? "Inactive" : "Active",
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        selfieUrl: user.selfieUrl,
+      }));
+
+      setEmployees(formattedEmployees);
+    } catch (err) {
+      console.error("Error fetching employees:", err);
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchEmployees = async () => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem("token");
-        
-        if (!token) {
-          throw new Error("Authentication token not found");
-        }
-
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/user/get-users`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch employees");
-        }
-
-        const data = await response.json();
-        console.log("API Response:", data);
-        
-        // Transform the data to match the expected format
-        // The users array is in data.users, not data.data
-        const formattedEmployees = data.data.users.map((user: any) => ({
-          id: user._id,
-          name: user.username,
-          position: user.position || "Employee",
-          department: user.department || "General",
-          joinDate: user.createdAt || new Date().toISOString(),
-          status: user.deletedAt ? "Inactive" : "Active",
-          email: user.email,
-          phoneNumber: user.phoneNumber,
-          role: user.role,
-          selfieUrl: user.selfieUrl
-        }));
-
-        setEmployees(formattedEmployees);
-      } catch (err) {
-        console.error("Error fetching employees:", err);
-        setError(err instanceof Error ? err.message : "An error occurred");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchEmployees();
   }, []);
+
+  // Function to delete an employee
+  const handleDeleteEmployee = async (id: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      
+      if (!token) {
+        throw new Error("Authentication token not found");
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/delete-user/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to delete employee");
+      }
+
+      // Remove the deleted employee from the state
+      setEmployees((prevEmployees) => 
+        prevEmployees.filter((employee) => employee.id !== id)
+      );
+
+      toast({
+        title: "Success",
+        description: "Employee deleted successfully",
+        variant: "default",
+      });
+    } catch (err) {
+      console.error("Error deleting employee:", err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to delete employee",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Filter employees based on search term
   const filteredEmployees = employees.filter(
@@ -225,7 +272,10 @@ export default function EmployeesPage() {
             <CardDescription>View and manage all employees</CardDescription>
           </CardHeader>
           <CardContent>
-            <EmployeesTable employees={filteredEmployees} />
+            <EmployeesTable 
+              employees={filteredEmployees} 
+              onDelete={handleDeleteEmployee}
+            />
           </CardContent>
         </Card>
       </div>
