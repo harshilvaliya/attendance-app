@@ -97,9 +97,9 @@ export function LeaveRequestsTable({
       setProcessingId(id);
       const token = localStorage.getItem("token");
 
-      axios.put(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/leave-form/${id}`,
-        { status: "approved" },
+      await axios.put(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/leave-form/${id}/status`,
+        { status: "Approved" },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -138,9 +138,9 @@ export function LeaveRequestsTable({
       setProcessingId(id);
       const token = localStorage.getItem("token");
 
-      axios.put(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/leave-form/${id}`,
-        { status: "rejected" },
+      await axios.put(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/leave-form/${id}/status`,
+        { status: "Rejected" },
         {
           headers: { Authorization: `Bearer ${token}` },
         }

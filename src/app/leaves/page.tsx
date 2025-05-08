@@ -34,7 +34,7 @@ interface LeaveData {
 const mapLeaveData = (data: any[]): LeaveRequest[] =>
   data.map((l: any) => ({
     id: l._id,
-    employee: l.user?.name ?? "N/A",
+    employee: l.user?.email ?? "N/A",
     type: l.leaveType,
     description: l.reason,
     document: l.document ?? null,
