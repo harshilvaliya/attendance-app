@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import {
   Card,
@@ -6,15 +9,92 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getEmployeesData } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Search } from "lucide-react";
 import { EmployeesTable } from "@/components/dashboard/employees-table";
 import { Input } from "@/components/ui/input";
 import { AddEmployeeDialog } from "@/components/dashboard/add-employee-dialog";
 
+interface Employee {
+  id: string;
+  name: string;
+  position: string;
+  department: string;
+  joinDate: string;
+  status: string;
+  email: string;
+  phoneNumber: string;
+  role: string;
+  selfieUrl?: string | null;
+}
+
 export default function EmployeesPage() {
-  const employees = getEmployeesData();
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem("token");
+        
+        if (!token) {
+          throw new Error("Authentication token not found");
+        }
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/user/get-users`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch employees");
+        }
+
+        const data = await response.json();
+        console.log("API Response:", data);
+        
+        // Transform the data to match the expected format
+        // The users array is in data.users, not data.data
+        const formattedEmployees = data.data.users.map((user: any) => ({
+          id: user._id,
+          name: user.username,
+          position: user.position || "Employee",
+          department: user.department || "General",
+          joinDate: user.createdAt || new Date().toISOString(),
+          status: user.deletedAt ? "Inactive" : "Active",
+          email: user.email,
+          phoneNumber: user.phoneNumber,
+          role: user.role,
+          selfieUrl: user.selfieUrl
+        }));
+
+        setEmployees(formattedEmployees);
+      } catch (err) {
+        console.error("Error fetching employees:", err);
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
+
+  // Filter employees based on search term
+  const filteredEmployees = employees.filter(
+    (employee) =>
+      employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.position.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // Count employees by department
   const departmentCounts = employees.reduce((acc, employee) => {
@@ -26,6 +106,44 @@ export default function EmployeesPage() {
   const topDepartments = Object.entries(departmentCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3);
+
+  if (loading) {
+    return (
+      <DashboardShell>
+        <div className="flex flex-col gap-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Employees</h1>
+            <p className="text-muted-foreground">
+              Manage employee profiles and information
+            </p>
+          </div>
+          <div className="flex justify-center items-center min-h-[400px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </DashboardShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardShell>
+        <div className="flex flex-col gap-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Employees</h1>
+            <p className="text-muted-foreground">
+              Manage employee profiles and information
+            </p>
+          </div>
+          <div className="flex justify-center items-center min-h-[400px]">
+            <div className="bg-red-50 text-red-600 p-4 rounded-lg shadow">
+              Error: {error}
+            </div>
+          </div>
+        </div>
+      </DashboardShell>
+    );
+  }
 
   return (
     <DashboardShell>
@@ -44,6 +162,8 @@ export default function EmployeesPage() {
                 type="search"
                 placeholder="Search employees..."
                 className="w-full pl-8 md:w-[300px]"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <AddEmployeeDialog>
@@ -105,7 +225,7 @@ export default function EmployeesPage() {
             <CardDescription>View and manage all employees</CardDescription>
           </CardHeader>
           <CardContent>
-            <EmployeesTable employees={employees} />
+            <EmployeesTable employees={filteredEmployees} />
           </CardContent>
         </Card>
       </div>
