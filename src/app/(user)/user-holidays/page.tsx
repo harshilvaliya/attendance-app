@@ -1,18 +1,77 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useToast } from "@/components/ui/use-toast";
 
-// Mock data for holidays
-const holidays = [
-  { id: 1, name: "New Year's Day", date: "2024-01-01" },
-  { id: 2, name: "Martin Luther King Jr. Day", date: "2024-01-15" },
-  { id: 3, name: "Memorial Day", date: "2024-05-27" },
-  { id: 4, name: "Independence Day", date: "2024-07-04" },
-  { id: 5, name: "Labor Day", date: "2024-09-02" },
-  { id: 6, name: "Thanksgiving Day", date: "2024-11-28" },
-  { id: 7, name: "Christmas Day", date: "2024-12-25" },
-];
+interface Holiday {
+  id: string;
+  name: string;
+  date: string;
+  startDate?: string;
+  endDate?: string;
+  isDateRange?: boolean;
+  type?: string;
+}
 
 export default function HolidayPage() {
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/user/holidays`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to fetch holidays");
+        }
+
+        const data = await response.json();
+        console.log("API Response:", data);
+
+        // Transform the data to match our interface
+        const formattedHolidays = data.data.map((holiday: any) => ({
+          id: holiday._id || holiday.id,
+          name: holiday.name,
+          date: holiday.startDate, // Use startDate as the primary date
+          startDate: holiday.startDate,
+          endDate: holiday.endDate,
+          isDateRange: holiday.isDateRange,
+          type: holiday.type
+        }));
+
+        setHolidays(formattedHolidays);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching holidays:", err);
+        setError(err instanceof Error ? err.message : "An error occurred");
+        toast({
+          title: "Error",
+          description:
+            err instanceof Error ? err.message : "Failed to fetch holidays",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHolidays();
+  }, [toast]);
+
   // Sort holidays by date
   const sortedHolidays = [...holidays].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -28,6 +87,27 @@ export default function HolidayPage() {
   const pastHolidays = sortedHolidays.filter(
     (holiday) => new Date(holiday.date) < today
   );
+
+  // Helper function to format date display
+  const formatDate = (holiday: Holiday) => {
+    if (holiday.isDateRange && holiday.startDate && holiday.endDate) {
+      return `${new Date(holiday.startDate).toLocaleDateString(undefined, {
+        month: "long",
+        day: "numeric",
+      })} - ${new Date(holiday.endDate).toLocaleDateString(undefined, {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })}`;
+    }
+    
+    return new Date(holiday.date).toLocaleDateString(undefined, {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
 
   return (
     <div className="container mx-auto px-4 sm:px-6 py-6 space-y-8 max-w-7xl min-h-screen">
@@ -68,93 +148,105 @@ export default function HolidayPage() {
         </Card>
       </div>
 
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Upcoming Holidays</h2>
-        <div className="space-y-4">
-          {upcomingHolidays.length === 0 ? (
-            <Card className="shadow-sm hover:shadow-md transition-shadow">
-              <CardContent className="py-6">
-                <p className="text-center text-muted-foreground">
-                  No upcoming holidays
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            upcomingHolidays.map((holiday) => (
-              <Card
-                key={holiday.id}
-                className="shadow-sm hover:shadow-md transition-shadow overflow-hidden"
-              >
-                <CardHeader className="py-3 flex flex-row items-center space-y-0">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
-                    <Calendar className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <CardTitle className="text-base font-medium">
-                      {holiday.name}
-                    </CardTitle>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {new Date(holiday.date).toLocaleDateString(undefined, {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </p>
-                  </div>
-                  <div className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                    {Math.ceil(
-                      (new Date(holiday.date).getTime() -
-                        new Date().getTime()) /
-                        (1000 * 60 * 60 * 24)
-                    )}{" "}
-                    days
-                  </div>
-                </CardHeader>
-              </Card>
-            ))
-          )}
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
         </div>
+      ) : error ? (
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="py-6">
+            <p className="text-center text-red-500">{error}</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Upcoming Holidays</h2>
+          <div className="space-y-4">
+            {upcomingHolidays.length === 0 ? (
+              <Card className="shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="py-6">
+                  <p className="text-center text-muted-foreground">
+                    No upcoming holidays
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              upcomingHolidays.map((holiday) => (
+                <Card
+                  key={holiday.id}
+                  className="shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+                >
+                  <CardHeader className="py-3 flex flex-row items-center space-y-0">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                      <Calendar className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-base font-medium">
+                        {holiday.name}
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {formatDate(holiday)}
+                      </p>
+                      {holiday.type && (
+                        <span className="inline-block px-2 py-0.5 mt-1 text-xs rounded-full bg-muted">
+                          {holiday.type}
+                        </span>
+                      )}
+                    </div>
+                    <div className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                      {Math.ceil(
+                        (new Date(holiday.date).getTime() -
+                          new Date().getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      )}{" "}
+                      days
+                    </div>
+                  </CardHeader>
+                </Card>
+              ))
+            )}
+          </div>
 
-        <h2 className="text-lg font-semibold pt-4">Past Holidays</h2>
-        <div className="space-y-4">
-          {pastHolidays.length === 0 ? (
-            <Card className="shadow-sm hover:shadow-md transition-shadow">
-              <CardContent className="py-6">
-                <p className="text-center text-muted-foreground">
-                  No past holidays
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            pastHolidays.map((holiday) => (
-              <Card
-                key={holiday.id}
-                className="shadow-sm hover:shadow-md transition-shadow overflow-hidden opacity-80"
-              >
-                <CardHeader className="py-3 flex flex-row items-center space-y-0">
-                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center mr-3">
-                    <Calendar className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base font-medium">
-                      {holiday.name}
-                    </CardTitle>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {new Date(holiday.date).toLocaleDateString(undefined, {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </p>
-                  </div>
-                </CardHeader>
+          <h2 className="text-lg font-semibold pt-4">Past Holidays</h2>
+          <div className="space-y-4">
+            {pastHolidays.length === 0 ? (
+              <Card className="shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="py-6">
+                  <p className="text-center text-muted-foreground">
+                    No past holidays
+                  </p>
+                </CardContent>
               </Card>
-            ))
-          )}
+            ) : (
+              pastHolidays.map((holiday) => (
+                <Card
+                  key={holiday.id}
+                  className="shadow-sm hover:shadow-md transition-shadow overflow-hidden opacity-80"
+                >
+                  <CardHeader className="py-3 flex flex-row items-center space-y-0">
+                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center mr-3">
+                      <Calendar className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-medium">
+                        {holiday.name}
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {formatDate(holiday)}
+                      </p>
+                      {holiday.type && (
+                        <span className="inline-block px-2 py-0.5 mt-1 text-xs rounded-full bg-muted">
+                          {holiday.type}
+                        </span>
+                      )}
+                    </div>
+                  </CardHeader>
+                </Card>
+              ))
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
