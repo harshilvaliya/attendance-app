@@ -48,7 +48,7 @@ export function HolidaysTable({
   const formatDate = (date: { start: string; end: string }) => {
     const startDate = new Date(date.start);
     const endDate = new Date(date.end);
-    
+
     if (startDate.getTime() === endDate.getTime()) {
       return startDate.toLocaleDateString("en-US", {
         weekday: "long",
@@ -57,7 +57,7 @@ export function HolidaysTable({
         year: "numeric",
       });
     }
-    
+
     return `${startDate.toLocaleDateString("en-US", {
       weekday: "long",
       month: "long",

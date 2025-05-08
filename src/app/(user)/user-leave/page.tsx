@@ -18,11 +18,11 @@ import { FileText, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 
-import { useState, FormEvent, ChangeEvent } from "react";
+import { useState, FormEvent, ChangeEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 interface Leave {
-  id: number;
+  id: string;
   type: string;
   from: string;
   to: string;
@@ -30,53 +30,6 @@ interface Leave {
   reason: string;
   document?: string;
 }
-
-// Mock data for leave requests
-const pendingLeaves: Leave[] = [
-  {
-    id: 1,
-    type: "Sick Leave",
-    from: "2023-05-10",
-    to: "2023-05-12",
-    status: "pending",
-    reason: "Medical appointment",
-  },
-  {
-    id: 2,
-    type: "Vacation",
-    from: "2023-06-15",
-    to: "2023-06-20",
-    status: "pending",
-    reason: "Family vacation",
-  },
-];
-
-const leaveHistory: Leave[] = [
-  {
-    id: 3,
-    type: "Sick Leave",
-    from: "2023-03-05",
-    to: "2023-03-07",
-    status: "approved",
-    reason: "Fever",
-  },
-  {
-    id: 4,
-    type: "Personal Leave",
-    from: "2023-04-10",
-    to: "2023-04-10",
-    status: "rejected",
-    reason: "Personal work",
-  },
-  {
-    id: 5,
-    type: "Vacation",
-    from: "2023-02-15",
-    to: "2023-02-20",
-    status: "approved",
-    reason: "Annual vacation",
-  },
-];
 
 interface LeaveFormData {
   leaveType: string;
@@ -252,42 +205,82 @@ function LeaveFormDialogContent({ onSuccess }: { onSuccess: () => void }) {
 
 export default function LeavePage() {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [leaveType, setLeaveType] = useState("");
-  const [fromDate, setFromDate] = useState<Date>();
-  const [toDate, setToDate] = useState<Date>();
-  const [reason, setReason] = useState("");
-  const [document, setDocument] = useState<File>();
+  const [pendingLeaves, setPendingLeaves] = useState<Leave[]>([]);
+  const [leaveHistory, setLeaveHistory] = useState<Leave[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const fetchLeaveData = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Authentication token not found");
+      }
 
-    if (!name || !leaveType || !fromDate || !toDate || !reason) {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/leave-forms`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to fetch leave data");
+      }
+
+      const data = await response.json();
+
+      // Transform the data to match our interface
+      const formattedLeaves = data.data.map((leave: any) => ({
+        id: leave._id,
+        type: leave.leaveType,
+        from: leave.fromDate,
+        to: leave.toDate,
+        status: leave.status.toLowerCase(),
+        reason: leave.reason,
+        document: leave.document,
+      }));
+
+      // Separate pending leaves from leave history
+      const pending = formattedLeaves.filter(
+        (leave: Leave) => leave.status === "pending"
+      );
+      const history = formattedLeaves.filter(
+        (leave: Leave) => leave.status !== "pending"
+      );
+
+      setPendingLeaves(pending);
+      setLeaveHistory(history);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
+        description:
+          err instanceof Error ? err.message : "Failed to fetch leave data",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    toast({
-      title: "Leave request submitted",
-      description: "Your leave request has been submitted for approval",
-    });
-
-    setOpen(false);
-    resetForm();
   };
 
-  const resetForm = () => {
-    setName("");
-    setLeaveType("");
-    setFromDate(undefined);
-    setToDate(undefined);
-    setReason("");
-    setDocument(undefined);
+  useEffect(() => {
+    fetchLeaveData();
+  }, []);
+
+  const handleLeaveSubmitSuccess = () => {
+    setOpen(false);
+    fetchLeaveData(); // Refresh data after successful submission
+    toast({
+      title: "Success",
+      description: "Your leave request has been submitted for approval",
+    });
   };
 
   return (
@@ -341,47 +334,101 @@ export default function LeavePage() {
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px] w-[calc(100%-2rem)] p-4 sm:p-6 rounded-lg max-h-[90vh] overflow-y-auto">
-            <LeaveFormDialogContent onSuccess={() => setOpen(false)} />
+            <LeaveFormDialogContent onSuccess={handleLeaveSubmitSuccess} />
           </DialogContent>
         </Dialog>
       </div>
 
-      <Card className="shadow-sm hover:shadow-md transition-shadow">
-        <CardHeader>
-          <CardTitle>Leave History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {leaveHistory.map((leave) => (
-              <div
-                key={leave.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg space-y-2 sm:space-y-0"
-              >
-                <div className="space-y-1">
-                  <div className="font-medium">{leave.type}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {new Date(leave.from).toLocaleDateString()} -{" "}
-                    {new Date(leave.to).toLocaleDateString()}
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      ) : error ? (
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="py-6">
+            <p className="text-center text-red-500">{error}</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader>
+            <CardTitle>Leave History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {leaveHistory.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">
+                  No leave history found
+                </p>
+              ) : (
+                leaveHistory.map((leave) => (
+                  <div
+                    key={leave.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg space-y-2 sm:space-y-0"
+                  >
+                    <div className="space-y-1">
+                      <div className="font-medium">{leave.type}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {new Date(leave.from).toLocaleDateString()} -{" "}
+                        {new Date(leave.to).toLocaleDateString()}
+                      </div>
+                      <div className="text-sm">{leave.reason}</div>
+                    </div>
+                    <div
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-xs font-medium self-start sm:self-center",
+                        leave.status === "approved"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : leave.status === "rejected"
+                          ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                      )}
+                    >
+                      {leave.status.charAt(0).toUpperCase() +
+                        leave.status.slice(1)}
+                    </div>
                   </div>
-                  <div className="text-sm">{leave.reason}</div>
-                </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {pendingLeaves.length > 0 && (
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader>
+            <CardTitle>Pending Requests</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {pendingLeaves.map((leave) => (
                 <div
-                  className={cn(
-                    "px-3 py-1.5 rounded-full text-xs font-medium self-start sm:self-center",
-                    leave.status === "approved"
-                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                      : leave.status === "rejected"
-                      ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                  )}
+                  key={leave.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg space-y-2 sm:space-y-0"
                 >
-                  {leave.status.charAt(0).toUpperCase() + leave.status.slice(1)}
+                  <div className="space-y-1">
+                    <div className="font-medium">{leave.type}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {new Date(leave.from).toLocaleDateString()} -{" "}
+                      {new Date(leave.to).toLocaleDateString()}
+                    </div>
+                    <div className="text-sm">{leave.reason}</div>
+                  </div>
+                  <div
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-medium self-start sm:self-center",
+                      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                    )}
+                  >
+                    Pending
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

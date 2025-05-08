@@ -21,9 +21,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import Link from "next/link";
+import axios from "axios";
 
 interface LeaveRequest {
-  id: number;
+  id: string;
   employee: string;
   type: string;
   description: string;
@@ -35,12 +36,17 @@ interface LeaveRequest {
 
 interface LeaveRequestsTableProps {
   requests: LeaveRequest[];
+  loading?: boolean;
+  onAction?: () => void;
 }
 
 export function LeaveRequestsTable({
   requests: initialRequests,
+  loading = false,
+  onAction,
 }: LeaveRequestsTableProps) {
   const [requests, setRequests] = useState<LeaveRequest[]>(initialRequests);
+  const [processingId, setProcessingId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const formatDate = (dateString: string) => {
@@ -86,30 +92,86 @@ export function LeaveRequestsTable({
     }
   };
 
-  const handleApprove = (id: number) => {
-    setRequests(
-      requests.map((request) =>
-        request.id === id ? { ...request, status: "approved" } : request
-      )
-    );
+  const handleApprove = async (id: string) => {
+    try {
+      setProcessingId(id);
+      const token = localStorage.getItem("token");
 
-    toast({
-      title: "Request approved",
-      description: "The leave request has been approved successfully",
-    });
+      axios.put(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/leave-form/${id}`,
+        { status: "approved" },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // Update local state
+      setRequests(
+        requests.map((request) =>
+          request.id === id ? { ...request, status: "approved" } : request
+        )
+      );
+
+      toast({
+        title: "Request approved",
+        description: "The leave request has been approved successfully",
+      });
+
+      // Refresh data from parent component
+      if (onAction) {
+        onAction();
+      }
+    } catch (error) {
+      console.error("Error approving leave request:", error);
+      toast({
+        title: "Error",
+        description: "Failed to approve leave request",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingId(null);
+    }
   };
 
-  const handleReject = (id: number) => {
-    setRequests(
-      requests.map((request) =>
-        request.id === id ? { ...request, status: "rejected" } : request
-      )
-    );
+  const handleReject = async (id: string) => {
+    try {
+      setProcessingId(id);
+      const token = localStorage.getItem("token");
 
-    toast({
-      title: "Request rejected",
-      description: "The leave request has been rejected",
-    });
+      axios.put(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/leave-form/${id}`,
+        { status: "rejected" },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // Update local state
+      setRequests(
+        requests.map((request) =>
+          request.id === id ? { ...request, status: "rejected" } : request
+        )
+      );
+
+      toast({
+        title: "Request rejected",
+        description: "The leave request has been rejected",
+      });
+
+      // Refresh data from parent component
+      if (onAction) {
+        onAction();
+      }
+    } catch (error) {
+      console.error("Error rejecting leave request:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reject leave request",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   return (
@@ -128,74 +190,92 @@ export function LeaveRequestsTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {requests.map((request) => (
-            <TableRow key={request.id}>
-              <TableCell className="font-medium">{request.employee}</TableCell>
-              <TableCell>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="link" className="p-0 h-auto">
-                      {request.type}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Leave Request Details</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="font-medium">Type</h4>
-                        <p>{request.type}</p>
-                      </div>
-                      <div>
-                        <h4 className="font-medium">Description</h4>
-                        <p className="text-muted-foreground">
-                          {request.description}
-                        </p>
-                      </div>
-                      {request.document && (
-                        <div>
-                          <Button asChild variant="outline" className="gap-2">
-                            <Link href={`/leaves/document/${request.id}`}>
-                              <FileText className="h-4 w-4" />
-                              View Document
-                            </Link>
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </DialogContent>
-                </Dialog>
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={6} className="text-center py-8">
+                Loading leave requests...
               </TableCell>
-              <TableCell>{formatDate(request.from)}</TableCell>
-              <TableCell>{formatDate(request.to)}</TableCell>
-              <TableCell>{getStatusBadge(request.status)}</TableCell>
-              {request.status === "pending" && (
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="h-8 w-8 text-green-600"
-                      onClick={() => handleApprove(request.id)}
-                    >
-                      <Check className="h-4 w-4" />
-                      <span className="sr-only">Approve</span>
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="h-8 w-8 text-red-600"
-                      onClick={() => handleReject(request.id)}
-                    >
-                      <X className="h-4 w-4" />
-                      <span className="sr-only">Reject</span>
-                    </Button>
-                  </div>
-                </TableCell>
-              )}
             </TableRow>
-          ))}
+          ) : requests.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="text-center py-8">
+                No leave requests found
+              </TableCell>
+            </TableRow>
+          ) : (
+            requests.map((request) => (
+              <TableRow key={request.id}>
+                <TableCell className="font-medium">
+                  {request.employee}
+                </TableCell>
+                <TableCell>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="link" className="p-0 h-auto">
+                        {request.type}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Leave Request Details</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-medium">Type</h4>
+                          <p>{request.type}</p>
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Description</h4>
+                          <p className="text-muted-foreground">
+                            {request.description}
+                          </p>
+                        </div>
+                        {request.document && (
+                          <div>
+                            <Button asChild variant="outline" className="gap-2">
+                              <Link href={`/leaves/document/${request.id}`}>
+                                <FileText className="h-4 w-4" />
+                                View Document
+                              </Link>
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </TableCell>
+                <TableCell>{formatDate(request.from)}</TableCell>
+                <TableCell>{formatDate(request.to)}</TableCell>
+                <TableCell>{getStatusBadge(request.status)}</TableCell>
+                {request.status === "pending" && (
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 text-green-600"
+                        onClick={() => handleApprove(request.id)}
+                        disabled={processingId === request.id}
+                      >
+                        <Check className="h-4 w-4" />
+                        <span className="sr-only">Approve</span>
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 text-red-600"
+                        onClick={() => handleReject(request.id)}
+                        disabled={processingId === request.id}
+                      >
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Reject</span>
+                      </Button>
+                    </div>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </div>

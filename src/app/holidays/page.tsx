@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import {
   Card,
@@ -6,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getHolidaysData } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { HolidaysTable } from "@/components/dashboard/holidays-table";
@@ -15,7 +17,55 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AddHolidayDialog } from "@/components/dashboard/add-holiday-dialog";
 
 export default function HolidaysPage() {
-  const holidays = getHolidaysData();
+  const [holidays, setHolidays] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      try {
+        setLoading(true);
+        // Get the token from localStorage or wherever you store it
+        const token = localStorage.getItem("token");
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/admin/holidays`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch holidays");
+        }
+
+        const data = await response.json();
+
+        // Transform the data to match the expected format
+        const formattedHolidays = data.data.map((holiday) => ({
+          id: holiday._id,
+          name: holiday.name,
+          date: {
+            start: holiday.startDate,
+            end: holiday.endDate || holiday.startDate,
+          },
+          type: holiday.type,
+        }));
+
+        setHolidays(formattedHolidays);
+      } catch (err) {
+        console.error("Error fetching holidays:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHolidays();
+  }, []);
 
   // Count upcoming holidays (from today)
   const today = new Date();
@@ -45,102 +95,114 @@ export default function HolidaysPage() {
           </AddHolidayDialog>
         </div>
 
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Holidays
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{holidays.length}</div>
-              <p className="text-xs text-muted-foreground">
-                For the current year
-              </p>
-            </CardContent>
-          </Card>
+        {loading ? (
+          <div className="flex justify-center items-center min-h-[200px]">
+            <p>Loading holidays...</p>
+          </div>
+        ) : error ? (
+          <div className="flex justify-center items-center min-h-[200px]">
+            <p className="text-red-500">Error: {error}</p>
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Total Holidays
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{holidays.length}</div>
+                  <p className="text-xs text-muted-foreground">
+                    For the current year
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Upcoming Holidays
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {upcomingHolidays.length}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Remaining this year
-              </p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Upcoming Holidays
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {upcomingHolidays.length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Remaining this year
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Next Holiday
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {nextHoliday ? nextHoliday.name : "None"}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {nextHoliday
-                  ? new Date(nextHoliday.date.start).toLocaleDateString(
-                      "en-US",
-                      {
-                        month: "short",
-                        day: "numeric",
-                      }
-                    )
-                  : "No upcoming holidays"}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Next Holiday
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {nextHoliday ? nextHoliday.name : "None"}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {nextHoliday
+                      ? new Date(nextHoliday.date.start).toLocaleDateString(
+                          "en-US",
+                          {
+                            month: "short",
+                            day: "numeric",
+                          }
+                        )
+                      : "No upcoming holidays"}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
 
-        <Tabs defaultValue="list" className="space-y-4">
-          <TabsList className="w-full flex flex-col sm:flex-row">
-            <TabsTrigger value="list" className="flex-1">
-              List View
-            </TabsTrigger>
-            <TabsTrigger value="calendar" className="flex-1">
-              Calendar View
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="list" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Company Holidays</CardTitle>
-                <CardDescription>
-                  View and manage all company holidays
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="overflow-x-auto p-0">
-                <div className="min-w-[320px]">
-                  <HolidaysTable holidays={holidays} />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="calendar" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Holiday Calendar</CardTitle>
-                <CardDescription>
-                  View holidays in calendar format
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="overflow-x-auto p-0">
-                <div className="min-w-[320px]">
-                  <HolidayCalendar holidays={holidays} />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            <Tabs defaultValue="list" className="space-y-4">
+              <TabsList className="w-full flex flex-col sm:flex-row">
+                <TabsTrigger value="list" className="flex-1">
+                  List View
+                </TabsTrigger>
+                <TabsTrigger value="calendar" className="flex-1">
+                  Calendar View
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="list" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Company Holidays</CardTitle>
+                    <CardDescription>
+                      View and manage all company holidays
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="overflow-x-auto p-0">
+                    <div className="min-w-[320px]">
+                      <HolidaysTable holidays={holidays} />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="calendar" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Holiday Calendar</CardTitle>
+                    <CardDescription>
+                      View holidays in calendar format
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="overflow-x-auto p-0">
+                    <div className="min-w-[320px]">
+                      <HolidayCalendar holidays={holidays} />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
       </div>
     </DashboardShell>
   );
