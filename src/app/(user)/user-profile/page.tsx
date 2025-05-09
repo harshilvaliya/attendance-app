@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, Mail, Phone, User, Building, Calendar } from "lucide-react";
+import { LogOut, Mail, Phone, User, Building, Calendar, Camera } from "lucide-react";
 import Image from "next/image";
 
 interface UserProfile {
@@ -24,6 +24,7 @@ export default function ProfilePage() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -62,138 +63,153 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg shadow">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-red-50 text-red-600 p-6 rounded-lg shadow-md max-w-md w-full">
+          <h3 className="font-semibold mb-2">Error</h3>
           {error}
         </div>
       </div>
     );
   }
   if (!user) return null;
-  console.log(user.selfieUrl);
+
+  const imageUrl = `${process.env.NEXT_PUBLIC_API_URL}/${user.selfieUrl.replace(/\\/g, '/')}`;
+  // console.log("Image URL:", imageUrl);
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-6 space-y-8 max-w-2xl min-h-screen">
-      <div className="space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-          Profile
-        </h1>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          Manage your personal information and settings
-        </p>
-      </div>
+    <div className="bg-gray-50 min-h-screen py-8">
+      <div className="container mx-auto px-4 sm:px-6 space-y-6 max-w-4xl">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
+              My Profile
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
+              Manage your personal information and settings
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="mt-4 sm:mt-0 shadow-sm hover:shadow-md transition-all flex items-center"
+            onClick={handleLogout}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+          </Button>
+        </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Image
-          src={user.selfieUrl}
-          alt="User Profile"
-          className="h-32 w-32 rounded-full object-cover"
-          height={100}
-          width={100}
-        />
-        <Card className="shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Account</CardTitle>
-            <User className="h-8 w-8 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">
-              {user.firstName} {user.lastName}
-            </div>
-            <p className="text-xs text-muted-foreground">{user.position}</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Join Date</CardTitle>
-            <Calendar className="h-6 w-6 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">
-              {new Date(user.joinDate).toLocaleDateString(undefined, {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })}
-            </div>
-            <p className="text-xs text-muted-foreground">Member since</p>
-          </CardContent>
-        </Card>
-      </div>
-      <div className="grid gap-6 sm:grid-cols-2">
-        <Card className="shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="text-lg font-medium">
-              Personal Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
-                <Mail className="h-5 w-5 text-primary" />
+        <div className="grid gap-6 md:grid-cols-12">
+          {/* Profile Card */}
+          <Card className="shadow-md hover:shadow-lg transition-shadow md:col-span-4 bg-white border-0">
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center text-center">
+                {imageError ? (
+                  <div className="h-32 w-32 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200 shadow-sm mb-4">
+                    <Camera className="h-12 w-12 text-gray-400" />
+                  </div>
+                ) : (
+                  <Image
+                    src={imageUrl}
+                    alt="User Profile"
+                    className="h-32 w-32 rounded-full object-cover border border-gray-200 shadow-sm mb-4"
+                    height={128}
+                    width={128}
+                    unoptimized={true}
+                    onError={() => setImageError(true)}
+                  />
+                )}
+                <h2 className="text-xl font-bold text-gray-900 mt-2">
+                  {user.firstName} {user.lastName}
+                </h2>
+                <p className="text-gray-600 text-sm">{user.position}</p>
+                <div className="flex items-center justify-center mt-2 text-gray-500 text-xs">
+                  <Calendar className="h-3 w-3 mr-1" />
+                  <span>
+                    Joined {new Date(user.joinDate).toLocaleDateString(undefined, {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium">Email</p>
-                <p className="text-sm text-muted-foreground">{user.email}</p>
-              </div>
-            </div>
-            <div className="flex items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
-                <Phone className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Phone</p>
-                <p className="text-sm text-muted-foreground">{user.phone}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="text-lg font-medium">
-              Employment Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
-                <Building className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Department</p>
-                <p className="text-sm text-muted-foreground">
-                  {user.department}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
-                <User className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Position</p>
-                <p className="text-sm text-muted-foreground">{user.position}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      <div className="flex justify-center sm:justify-end pt-4">
-        <Button
-          variant="destructive"
-          className="w-full sm:w-auto shadow-sm hover:shadow-md transition-all"
-          onClick={handleLogout}
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          Logout
-        </Button>
+            </CardContent>
+          </Card>
+
+          {/* Information Cards */}
+          <div className="md:col-span-8 space-y-6">
+            {/* Personal Information Card */}
+            <Card className="shadow-sm hover:shadow-md transition-shadow bg-white border-0">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-semibold flex items-center">
+                  <User className="h-5 w-5 mr-2 text-blue-500" />
+                  Personal Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="flex items-center p-3 rounded-lg bg-gray-50">
+                    <div className="h-9 w-9 rounded-full bg-blue-50 flex items-center justify-center mr-3">
+                      <Mail className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500">Email</p>
+                      <p className="text-sm font-medium">{user.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center p-3 rounded-lg bg-gray-50">
+                    <div className="h-9 w-9 rounded-full bg-blue-50 flex items-center justify-center mr-3">
+                      <Phone className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500">Phone</p>
+                      <p className="text-sm font-medium">{user.phone}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Employment Details Card */}
+            <Card className="shadow-sm hover:shadow-md transition-shadow bg-white border-0">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-semibold flex items-center">
+                  <Building className="h-5 w-5 mr-2 text-blue-500" />
+                  Employment Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="flex items-center p-3 rounded-lg bg-gray-50">
+                    <div className="h-9 w-9 rounded-full bg-blue-50 flex items-center justify-center mr-3">
+                      <Building className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500">Department</p>
+                      <p className="text-sm font-medium">{user.department}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center p-3 rounded-lg bg-gray-50">
+                    <div className="h-9 w-9 rounded-full bg-blue-50 flex items-center justify-center mr-3">
+                      <User className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500">Position</p>
+                      <p className="text-sm font-medium">{user.position}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

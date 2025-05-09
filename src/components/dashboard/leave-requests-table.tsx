@@ -132,7 +132,7 @@ export function LeaveRequestsTable({
       let backendField = field;
       if (field === "from") backendField = "fromDate";
       if (field === "to") backendField = "toDate";
-      if (field === "employee") backendField = "user.email";
+      if (field === "employee") backendField = "user.username";
       if (field === "type") backendField = "leaveType";
 
       onSort(backendField, newDirection === "default" ? "desc" : newDirection);
@@ -269,6 +269,7 @@ export function LeaveRequestsTable({
                 {getSortIcon("to")}
               </Button>
             </TableHead>
+            <TableHead>Document</TableHead>
             <TableHead>
               <Button
                 variant="ghost"
@@ -328,7 +329,11 @@ export function LeaveRequestsTable({
                         {request.document && (
                           <div>
                             <Button asChild variant="outline" className="gap-2">
-                              <Link href={`/leaves/document/${request.id}`}>
+                              <Link
+                                href={`${process.env.NEXT_PUBLIC_API_URL}/leaves/document/${request.id}.replace(/\\/g, '/')`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
                                 <FileText className="h-4 w-4" />
                                 View Document
                               </Link>
@@ -341,6 +346,20 @@ export function LeaveRequestsTable({
                 </TableCell>
                 <TableCell>{formatDate(request.from)}</TableCell>
                 <TableCell>{formatDate(request.to)}</TableCell>
+                <TableCell>
+                  {request.document ? (
+                    <a
+                      href={`${process.env.NEXT_PUBLIC_API_URL}/${request.document}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline"
+                    >
+                      View
+                    </a>
+                  ) : (
+                    <span>-</span>
+                  )}
+                </TableCell>
                 <TableCell>{getStatusBadge(request.status)}</TableCell>
                 {request.status === "pending" && (
                   <TableCell className="text-right">

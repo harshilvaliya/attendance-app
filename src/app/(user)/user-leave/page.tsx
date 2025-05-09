@@ -144,7 +144,11 @@ function LeaveFormDialogContent({ onSuccess }: { onSuccess: () => void }) {
             value={formData.fromDate}
             onChange={handleInputChange}
             required
-            min={new Date().toISOString().split("T")[0]}
+            min={(() => {
+              const date = new Date();
+              date.setDate(date.getDate() + 2);
+              return date.toISOString().split("T")[0];
+            })()}
             className="w-full"
           />
         </div>
