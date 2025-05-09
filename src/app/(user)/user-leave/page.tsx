@@ -184,11 +184,11 @@ function LeaveFormDialogContent({ onSuccess }: { onSuccess: () => void }) {
           name="document"
           type="file"
           onChange={handleFileChange}
-          accept=".jpg,.jpeg,.png,.webp"
+          accept=".jpg,.jpeg,.png,.webp, .pdf"
           className="w-full"
         />
         <p className="text-sm text-muted-foreground mt-1">
-          Accepted formats: JPG, PNG, WebP
+          Accepted formats: JPG, PNG, WebP & PDF
         </p>
       </div>
       {error && (

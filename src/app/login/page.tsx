@@ -90,7 +90,7 @@ export default function LoginPage() {
       if (data.details.role === "admin") {
         router.push("/admin-dashboard");
       } else {
-        router.push("/user-leave");
+        router.push("/user-attendance");
       }
     } catch (err: any) {
       console.error("Error during login:", err);
@@ -146,6 +146,7 @@ export default function LoginPage() {
                 type="password"
                 required
                 autoComplete="off"
+                minLength={8}
                 className={`mt-1 block w-full rounded-md border ${
                   errors.password ? "border-red-500" : "border-input"
                 } bg-background px-3 py-2 text-sm`}

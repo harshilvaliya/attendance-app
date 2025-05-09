@@ -5,11 +5,15 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LogOut, Mail, Phone, User, Building, Calendar } from "lucide-react";
+import Image from "next/image";
 
 interface UserProfile {
   name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
+  selfieUrl: string;
   department: string;
   position: string;
   joinDate: string;
@@ -73,6 +77,7 @@ export default function ProfilePage() {
     );
   }
   if (!user) return null;
+  console.log(user.selfieUrl);
 
   return (
     <div className="container mx-auto px-4 sm:px-6 py-6 space-y-8 max-w-2xl min-h-screen">
@@ -84,14 +89,24 @@ export default function ProfilePage() {
           Manage your personal information and settings
         </p>
       </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
+        <Image
+          src={user.selfieUrl}
+          alt="User Profile"
+          className="h-32 w-32 rounded-full object-cover"
+          height={100}
+          width={100}
+        />
         <Card className="shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Account</CardTitle>
             <User className="h-8 w-8 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold">{user.name}</div>
+            <div className="text-xl font-bold">
+              {user.firstName} {user.lastName}
+            </div>
             <p className="text-xs text-muted-foreground">{user.position}</p>
           </CardContent>
         </Card>
@@ -103,6 +118,7 @@ export default function ProfilePage() {
           <CardContent>
             <div className="text-xl font-bold">
               {new Date(user.joinDate).toLocaleDateString(undefined, {
+                day: "numeric",
                 month: "short",
                 year: "numeric",
               })}
