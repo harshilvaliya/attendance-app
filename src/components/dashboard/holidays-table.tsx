@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { EditHolidayDialog } from "./edit-holiday-dialog";
+import { HolidayDialog, HolidayFormData } from "./HolidayDialog";
 
 interface Holiday {
   id: number;
@@ -201,7 +201,6 @@ export function HolidaysTable({
                   className="flex items-center p-0 font-medium"
                 >
                   Holiday Name
-                  {getSortIcon("name")}
                 </Button>
               </TableHead>
               <TableHead>
@@ -221,7 +220,6 @@ export function HolidaysTable({
                   className="flex items-center p-0 font-medium"
                 >
                   Type
-                  {getSortIcon("type")}
                 </Button>
               </TableHead>
               <TableHead>Status</TableHead>
@@ -229,52 +227,67 @@ export function HolidaysTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {holidays.map((holiday) => (
-              <TableRow key={holiday.id}>
-                <TableCell className="font-medium">{holiday.name}</TableCell>
-                <TableCell>{formatDate(holiday.date)}</TableCell>
-                <TableCell>{holiday.type}</TableCell>
-                <TableCell>
-                  {isUpcoming(holiday.date) ? (
-                    <Badge
-                      variant="outline"
-                      className="bg-green-50 text-green-700 hover:bg-green-50 dark:bg-green-900/20 dark:text-green-400"
-                    >
-                      Upcoming
-                    </Badge>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className="bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300"
-                    >
-                      Past
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <EditHolidayDialog
-                      holiday={holiday}
-                      onHolidayUpdated={handleHolidayUpdated}
-                    >
-                      <Button size="icon" variant="outline" className="h-8 w-8">
-                        <Pencil className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
+            {holidays.map((holiday) => {
+              const initialData: HolidayFormData = {
+                name: holiday.name,
+                startDate: holiday.date.start,
+                endDate: holiday.date.end || "",
+                isDateRange: holiday.date.start !== holiday.date.end,
+                type: (holiday.type as HolidayFormData["type"]) || "Other",
+              };
+              return (
+                <TableRow key={holiday.id}>
+                  <TableCell className="font-medium">{holiday.name}</TableCell>
+                  <TableCell>{formatDate(holiday.date)}</TableCell>
+                  <TableCell>{holiday.type}</TableCell>
+                  <TableCell>
+                    {isUpcoming(holiday.date) ? (
+                      <Badge
+                        variant="outline"
+                        className="bg-green-50 text-green-700 hover:bg-green-50 dark:bg-green-900/20 dark:text-green-400"
+                      >
+                        Upcoming
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300"
+                      >
+                        Past
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <HolidayDialog
+                        mode="edit"
+                        holidayId={holiday.id}
+                        initialData={initialData}
+                        onSuccess={handleHolidayUpdated}
+                      >
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                      </HolidayDialog>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 text-red-600"
+                        onClick={() => handleDelete(holiday.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete</span>
                       </Button>
-                    </EditHolidayDialog>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="h-8 w-8 text-red-600"
-                      onClick={() => handleDelete(holiday.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Delete</span>
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

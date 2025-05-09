@@ -1,5 +1,5 @@
 "use client";
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,21 +10,13 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-interface HolidayFormData {
+export interface HolidayFormData {
   name: string;
   startDate: string;
   endDate?: string;
   isDateRange: boolean;
   type: "National" | "Religious" | "Regional" | "Corporate" | "Other";
 }
-
-const initialFormData: HolidayFormData = {
-  name: "",
-  startDate: "",
-  endDate: "",
-  isDateRange: false,
-  type: "Other",
-};
 
 const holidayTypes: HolidayFormData["type"][] = [
   "National",
@@ -34,13 +26,39 @@ const holidayTypes: HolidayFormData["type"][] = [
   "Other",
 ];
 
-export function AddHolidayDialog({ children, onHolidayAdded }: { children: React.ReactNode; onHolidayAdded?: () => void }) {
+interface HolidayDialogProps {
+  children: React.ReactNode;
+  mode: "add" | "edit";
+  initialData?: HolidayFormData;
+  holidayId?: number | string;
+  onSuccess: () => void;
+}
+
+export function HolidayDialog({
+  children,
+  mode,
+  initialData,
+  holidayId,
+  onSuccess,
+}: HolidayDialogProps) {
   const [open, setOpen] = useState(false);
-  const [formData, setFormData] = useState(initialFormData);
+  const [formData, setFormData] = useState<HolidayFormData>(
+    initialData || {
+      name: "",
+      startDate: "",
+      endDate: "",
+      isDateRange: false,
+      type: "Other",
+    }
+  );
   const [message, setMessage] = useState<{
     type: "error" | "success";
     text: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (initialData) setFormData(initialData);
+  }, [initialData, open]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -72,22 +90,38 @@ export function AddHolidayDialog({ children, onHolidayAdded }: { children: React
       return setMessage({ type: "error", text: "Invalid or earlier end date" });
     }
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/admin/holiday`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-          },
-          body: JSON.stringify(formData),
-        }
-      );
+      const url =
+        mode === "add"
+          ? `${process.env.NEXT_PUBLIC_API_URL}/admin/holiday`
+          : `${process.env.NEXT_PUBLIC_API_URL}/admin/holiday/${holidayId}`;
+      const method = mode === "add" ? "POST" : "PUT";
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+        },
+        body: JSON.stringify(formData),
+      });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to add holiday");
-      setFormData(initialFormData);
-      setOpen(false); // Close dialog
-      if (onHolidayAdded) onHolidayAdded(); // Notify parent for toast
+      if (!res.ok) throw new Error(data.message || "Failed to save holiday");
+      setMessage({
+        type: "success",
+        text: `Holiday ${mode === "add" ? "added" : "updated"} successfully`,
+      });
+      setTimeout(() => {
+        setOpen(false);
+        setFormData(
+          initialData || {
+            name: "",
+            startDate: "",
+            endDate: "",
+            isDateRange: false,
+            type: "Other",
+          }
+        );
+        onSuccess();
+      }, 1000);
     } catch (err) {
       setMessage({
         type: "error",
@@ -101,7 +135,9 @@ export function AddHolidayDialog({ children, onHolidayAdded }: { children: React
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[500px] w-[calc(100%-2rem)] p-4 sm:p-6 rounded-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Holiday</DialogTitle>
+          <DialogTitle>
+            {mode === "add" ? "Add New Holiday" : "Edit Holiday"}
+          </DialogTitle>
         </DialogHeader>
         <Card className="shadow-none border-none">
           <CardContent>
@@ -196,7 +232,7 @@ export function AddHolidayDialog({ children, onHolidayAdded }: { children: React
                 </label>
               </div>
               <Button type="submit" className="w-full">
-                Add Holiday
+                {mode === "add" ? "Add Holiday" : "Update Holiday"}
               </Button>
             </form>
           </CardContent>

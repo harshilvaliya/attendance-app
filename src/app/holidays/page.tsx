@@ -14,7 +14,7 @@ import { PlusCircle } from "lucide-react";
 import { HolidaysTable } from "@/components/dashboard/holidays-table";
 import { HolidayCalendar } from "@/components/dashboard/holiday-calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AddHolidayDialog } from "@/components/dashboard/add-holiday-dialog";
+import { HolidayDialog } from "@/components/dashboard/HolidayDialog";
 
 export default function HolidaysPage() {
   const [holidays, setHolidays] = useState([]);
@@ -27,7 +27,7 @@ export default function HolidaysPage() {
 
   const fetchHolidays = async () => {
     try {
-      setLoading(true);
+      // setLoading(true);
       // Get the token from localStorage or wherever you store it
       const token = localStorage.getItem("token");
 
@@ -80,9 +80,9 @@ export default function HolidaysPage() {
     const fieldMapping = {
       name: "name",
       date: "startDate",
-      type: "type"
+      type: "type",
     };
-    
+
     setSortBy(fieldMapping[field] || "startDate");
     setOrder(direction);
   };
@@ -111,12 +111,12 @@ export default function HolidaysPage() {
               Manage company holidays and events
             </p>
           </div>
-          <AddHolidayDialog>
+          <HolidayDialog mode="add" onSuccess={fetchHolidays}>
             <Button className="gap-2 w-full md:w-auto">
               <PlusCircle className="h-4 w-4" />
               Add Holiday
             </Button>
-          </AddHolidayDialog>
+          </HolidayDialog>
         </div>
 
         {loading ? (
