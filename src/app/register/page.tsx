@@ -2,58 +2,177 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useToast } from "@/components/ui/use-toast";
+import { Eye, EyeOff } from "lucide-react"; // Add these imports
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
+  const { toast } = useToast();
+  // Add state variables for password visibility
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [form, setForm] = useState({
+    username: "",
+    firstName: "",
+    lastName: "",
+    phoneNumber: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    selfie: null as File | null,
+  });
+  const [errors, setErrors] = useState({
+    username: "",
+    firstName: "",
+    lastName: "",
+    phoneNumber: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    selfie: "",
+  });
   const [loading, setLoading] = useState(false);
+
+  const validateField = (name: string, value: string) => {
+    switch (name) {
+      case "username":
+        const usernameRegex = /^[a-zA-Z0-9@#_-]+$/;
+        if (value.length < 3 || value.length > 30) {
+          return "Username must be between 3 and 30 characters";
+        }
+        if (!usernameRegex.test(value)) {
+          return "Username can only contain letters, numbers, and special characters (@, #, _, -)";
+        }
+        break;
+      case "firstName":
+      case "lastName":
+        if (!value.trim()) {
+          return `${name === "firstName" ? "First" : "Last"} name is required`;
+        }
+        const nameRegex = /^[A-Za-z]+$/;
+        if (!nameRegex.test(value)) {
+          return `${
+            name === "firstName" ? "First" : "Last"
+          } name can only contain letters`;
+        }
+        break;
+      case "phoneNumber":
+        if (!/^[0-9]{10}$/.test(value)) {
+          return "Phone number must be 10 digits";
+        }
+        break;
+      case "email":
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          return "Invalid email format";
+        }
+        break;
+      case "password":
+        if (value.length < 8) {
+          return "Password must be at least 8 characters long";
+        }
+        if (!/[a-z]/.test(value)) {
+          return "Password must contain at least one lowercase letter";
+        }
+        if (!/[A-Z]/.test(value)) {
+          return "Password must contain at least one uppercase letter";
+        }
+        if (!/\d/.test(value)) {
+          return "Password must contain at least one number";
+        }
+        if (!/[@$!%*?&]/.test(value)) {
+          return "Password must contain at least one special character (@$!%*?&)";
+        }
+        break;
+      case "confirmPassword":
+        if (value !== form.password) {
+          return "Passwords do not match";
+        }
+        break;
+    }
+    return "";
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, files } = e.target;
+    if (name === "selfie" && files) {
+      setForm((f) => ({ ...f, selfie: files[0] }));
+      setErrors((e) => ({
+        ...e,
+        selfie: files[0] ? "" : "Please upload a selfie",
+      }));
+    } else {
+      setForm((f) => ({ ...f, [name]: value }));
+      setErrors((e) => ({ ...e, [name]: validateField(name, value) }));
+      if (name === "password") {
+        setErrors((e) => ({
+          ...e,
+          confirmPassword: form.confirmPassword
+            ? validateField("confirmPassword", form.confirmPassword)
+            : "",
+        }));
+      }
+    }
+  };
+
+  const isFormValid = () => {
+    return (
+      !Object.values(errors).some((error) => error !== "") &&
+      Object.entries(form).every(([key, value]) => {
+        if (key === "selfie") return value !== null;
+        return value !== "";
+      })
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
+    if (!isFormValid()) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please fix all errors before submitting",
+      });
       return;
     }
+    setLoading(true);
 
     try {
+      const data = new FormData();
+      data.append("username", form.username);
+      data.append("firstName", form.firstName);
+      data.append("lastName", form.lastName);
+      data.append("phoneNumber", form.phoneNumber);
+      data.append("email", form.email);
+      data.append("password", form.password);
+      data.append("confirm_password", form.confirmPassword);
+      data.append("selfie", form.selfie!);
+
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/user/register`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            username,
-            phoneNumber,
-            email,
-            password,
-            confirm_password: confirmPassword,
-          }),
+          body: data,
         }
       );
 
-      const data = await res.json();
-
+      const result = await res.json();
       if (!res.ok) {
-        setError(data.message || "Registration failed");
-        return;
+        throw new Error(result.message || "Registration failed");
       }
 
-      alert("Registration successful!");
+      toast({
+        title: "Success",
+        description: "Registration successful!",
+      });
       router.push("/login");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error during registration:", err);
-      setError("Something went wrong");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.message || "Something went wrong",
+      });
     } finally {
       setLoading(false);
     }
@@ -63,12 +182,16 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-md space-y-8 p-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Create Account</h1>
+          <h1 className="text-3xl font-bold">Create Account</h1>
           <p className="text-muted-foreground mt-2">
             Register to start managing your attendance
           </p>
         </div>
-        <form className="space-y-6" onSubmit={handleSubmit}>
+        <form
+          className="space-y-6"
+          onSubmit={handleSubmit}
+          encType="multipart/form-data"
+        >
           <div className="space-y-4">
             <div>
               <label htmlFor="username" className="text-sm font-medium">
@@ -76,13 +199,79 @@ export default function RegisterPage() {
               </label>
               <input
                 id="username"
+                name="username"
                 type="text"
                 required
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                autoComplete="off"
+                className={`mt-1 block w-full rounded-md border ${
+                  errors.username ? "border-red-500" : "border-input"
+                } bg-background px-3 py-2 text-sm`}
                 placeholder="Enter your username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                value={form.username}
+                onChange={handleChange}
+                minLength={3}
+                maxLength={30}
+                onKeyPress={(e) => {
+                  if (!/^[a-zA-Z0-9@#_-]+$/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
               />
+              {errors.username && (
+                <p className="text-red-500 text-xs mt-1">{errors.username}</p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="firstName" className="text-sm font-medium">
+                First Name
+              </label>
+              <input
+                id="firstName"
+                name="firstName"
+                type="text"
+                required
+                autoComplete="off"
+                className={`mt-1 block w-full rounded-md border ${
+                  errors.firstName ? "border-red-500" : "border-input"
+                } bg-background px-3 py-2 text-sm`}
+                placeholder="Enter your first name"
+                value={form.firstName}
+                onChange={handleChange}
+                onKeyPress={(e) => {
+                  if (!/^[A-Za-z]+$/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+              />
+              {errors.firstName && (
+                <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="lastName" className="text-sm font-medium">
+                Last Name
+              </label>
+              <input
+                id="lastName"
+                name="lastName"
+                type="text"
+                required
+                autoComplete="off"
+                className={`mt-1 block w-full rounded-md border ${
+                  errors.lastName ? "border-red-500" : "border-input"
+                } bg-background px-3 py-2 text-sm`}
+                placeholder="Enter your last name"
+                value={form.lastName}
+                onChange={handleChange}
+                onKeyPress={(e) => {
+                  if (!/^[A-Za-z]+$/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+              />
+              {errors.lastName && (
+                <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>
+              )}
             </div>
             <div>
               <label htmlFor="phoneNumber" className="text-sm font-medium">
@@ -90,13 +279,31 @@ export default function RegisterPage() {
               </label>
               <input
                 id="phoneNumber"
+                name="phoneNumber"
                 type="tel"
+                pattern="[0-9]*"
+                inputMode="numeric"
                 required
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                autoComplete="off"
+                maxLength={10}
+                className={`mt-1 block w-full rounded-md border ${
+                  errors.phoneNumber ? "border-red-500" : "border-input"
+                } bg-background px-3 py-2 text-sm`}
                 placeholder="Enter your phone number"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                value={form.phoneNumber}
+                onChange={handleChange}
+                onKeyPress={(e) => {
+                  // Allow only numeric input
+                  if (!/[0-9]/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
               />
+              {errors.phoneNumber && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.phoneNumber}
+                </p>
+              )}
             </div>
             <div>
               <label htmlFor="email" className="text-sm font-medium">
@@ -104,53 +311,136 @@ export default function RegisterPage() {
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 required
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                autoComplete="off"
+                className={`mt-1 block w-full rounded-md border ${
+                  errors.email ? "border-red-500" : "border-input"
+                } bg-background px-3 py-2 text-sm`}
                 placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={form.email}
+                onChange={handleChange}
               />
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+              )}
             </div>
             <div>
               <label htmlFor="password" className="text-sm font-medium">
                 Password
               </label>
-              <input
-                id="password"
-                type="password"
-                required
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  autoComplete="off"
+                  className={`mt-1 block w-full rounded-md border ${
+                    errors.password ? "border-red-500" : "border-input"
+                  } bg-background px-3 py-2 text-sm`}
+                  placeholder="Enter your password"
+                  value={form.password}
+                  minLength={8}
+                  onChange={handleChange}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <Eye className="h-4 w-4" />
+                  ) : (
+                    <EyeOff className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+              )}
             </div>
             <div>
               <label htmlFor="confirmPassword" className="text-sm font-medium">
                 Confirm Password
               </label>
+              <div className="relative">
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  required
+                  autoComplete="off"
+                  className={`mt-1 block w-full rounded-md border ${
+                    errors.confirmPassword ? "border-red-500" : "border-input"
+                  } bg-background px-3 py-2 text-sm`}
+                  placeholder="Confirm your password"
+                  minLength={8}
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? (
+                    <Eye className="h-4 w-4" />
+                  ) : (
+                    <EyeOff className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              {errors.confirmPassword && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.confirmPassword}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="selfie" className="text-sm font-medium">
+                Upload Selfie
+              </label>
               <input
-                id="confirmPassword"
-                type="password"
+                id="selfie"
+                name="selfie"
+                type="file"
+                accept="image/*"
                 required
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                placeholder="Confirm your password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="off"
+                onChange={handleChange}
+                className={`mt-1 block w-full rounded-md border bg-background px-3 py-2 text-gray-400 text-sm hover:cursor-pointer ${
+                  errors.selfie ? "text-red-500" : ""
+                }`}
               />
+              {errors.selfie && (
+                <p className="text-red-500 text-xs mt-1">{errors.selfie}</p>
+              )}
             </div>
           </div>
 
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
           <button
             type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            disabled={loading || !isFormValid()}
+            className={`w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ${
+              !isFormValid()
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-primary/90"
+            }`}
           >
             {loading ? "Creating account..." : "Create Account"}
           </button>
+
+          <div className="text-center text-sm">
+            <p className="text-muted-foreground">
+              Already have an account?{" "}
+              <Link href="/login" className="text-primary hover:underline">
+                Sign in here
+              </Link>
+            </p>
+          </div>
         </form>
       </div>
     </div>

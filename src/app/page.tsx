@@ -2,20 +2,33 @@ import Link from "next/link";
 
 export default function Page() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-6">
-      <div className="flex flex-col gap-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold mb-4">
+          Welcome to InfiniDev
+        </h1>
+        <p className="text-muted-foreground text-lg">
+          Empowering Innovation Through Technology
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-4 w-full max-w-md px-4">
         <Link
-          href="/admin-dashboard"
-          className="px-6 py-3 text-lg font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+          href="/login"
+          className="px-6 py-3 text-lg font-semibold text-primary-foreground bg-primary rounded-[var(--radius)] hover:bg-primary/90 transition-colors text-center"
         >
-          Admin Dashboard
+          Login
         </Link>
         <Link
-          href="/user-leave"
-          className="px-6 py-3 text-lg font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+          href="/register"
+          className="px-6 py-3 text-lg font-semibold text-accent-foreground bg-accent rounded-[var(--radius)] border-2 border-border hover:bg-accent/90 transition-colors text-center"
         >
-          User Dashboard
+          Register
         </Link>
+      </div>
+
+      <div className="mt-8 text-sm text-muted-foreground">
+        © 2024 InfiniDev. All rights reserved.
       </div>
     </div>
   );

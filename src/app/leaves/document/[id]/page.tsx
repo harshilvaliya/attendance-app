@@ -4,18 +4,22 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function DocumentPage({ params }: { params: { id: string } }) {
   const leaveData = getLeaveRequestsData();
-  const request = [...leaveData.pending, ...leaveData.approved, ...leaveData.rejected].find(
-    (r) => r.id === parseInt(params.id)
-  );
+  const request = [
+    ...leaveData.pending,
+    ...leaveData.approved,
+    ...leaveData.rejected,
+  ].find((r) => r.id === parseInt(params.id));
 
   if (!request || !request.document) {
     notFound();
   }
 
-  const isImage = request.document.endsWith(".jpg") || request.document.endsWith(".png");
+  const isImage =
+    request.document.endsWith(".jpg") || request.document.endsWith(".png");
   const isPDF = request.document.endsWith(".pdf");
 
   return (
@@ -38,7 +42,7 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
 
         <div className="rounded-lg border p-4">
           {isImage && (
-            <img
+            <Image
               src={request.document}
               alt={`Document for ${request.employee}'s leave request`}
               className="max-w-full h-auto"
@@ -55,4 +59,4 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
       </div>
     </DashboardShell>
   );
-} 
+}

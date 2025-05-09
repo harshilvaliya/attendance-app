@@ -1,10 +1,17 @@
 "use client"
 
 import { useState } from "react"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Pencil, Trash2, UserCircle } from "lucide-react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { MoreHorizontal, Pencil, Trash2, UserCircle, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,8 +19,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useToast } from "@/components/ui/use-toast"
+} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/components/ui/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,88 +30,147 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+} from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Employee {
-  id: number
-  name: string
-  position: string
-  department: string
-  joinDate: string
-  status: string
+  id: string;
+  name: string;
+  position: string;
+  department: string;
+  joinDate: string;
+  status: string;
 }
 
 interface EmployeesTableProps {
-  employees: Employee[]
+  employees: Employee[];
+  onDelete?: (id: string) => void;
+  onSort?: (field: string, direction: string) => void;
+  currentSortField?: string;
+  currentSortOrder?: string;
 }
 
-export function EmployeesTable({ employees: initialEmployees }: EmployeesTableProps) {
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees)
-  const [deleteId, setDeleteId] = useState<number | null>(null)
-  const [viewEmployee, setViewEmployee] = useState<Employee | null>(null)
-  const { toast } = useToast()
+type SortField = "name" | "position" | "department" | "joinDate" | "tenure" | "status";
+
+export function EmployeesTable({ 
+  employees, 
+  onDelete, 
+  onSort,
+  currentSortField = "",
+  currentSortOrder = "desc"
+}: EmployeesTableProps) {
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [viewEmployee, setViewEmployee] = useState<Employee | null>(null);
+  const { toast } = useToast();
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-  }
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
 
   const calculateTenure = (joinDateString: string) => {
-    const joinDate = new Date(joinDateString)
-    const today = new Date()
+    const joinDate = new Date(joinDateString);
+    const today = new Date();
 
-    let years = today.getFullYear() - joinDate.getFullYear()
-    const months = today.getMonth() - joinDate.getMonth()
+    let years = today.getFullYear() - joinDate.getFullYear();
+    const months = today.getMonth() - joinDate.getMonth();
 
     if (months < 0 || (months === 0 && today.getDate() < joinDate.getDate())) {
-      years--
+      years--;
     }
 
-    return years
-  }
+    return years;
+  };
 
-  const handleEdit = (id: number) => {
+  const handleSort = (field: SortField) => {
+    if (!onSort) return;
+
+    // Map frontend field names to backend field names
+    const fieldMapping: Record<SortField, string> = {
+      name: "username",
+      position: "position",
+      department: "department",
+      joinDate: "createdAt",
+      tenure: "createdAt", // Backend doesn't have tenure, use createdAt
+      status: "deletedAt", // Use deletedAt to determine status
+    };
+
+    const backendField = fieldMapping[field];
+
+    // Determine the new sort direction
+    let newDirection = "asc";
+    if (currentSortField === backendField) {
+      newDirection = currentSortOrder === "asc" ? "desc" : "asc";
+    }
+
+    // Call the parent's sort handler
+    onSort(backendField, newDirection);
+  };
+
+  // Get sort icon based on current sort state
+  const getSortIcon = (field: SortField) => {
+    // Map frontend field names to backend field names
+    const fieldMapping: Record<SortField, string> = {
+      name: "username",
+      position: "position",
+      department: "department",
+      joinDate: "createdAt",
+      tenure: "createdAt",
+      status: "deletedAt",
+    };
+
+    const backendField = fieldMapping[field];
+
+    if (currentSortField !== backendField) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    
+    return currentSortOrder === "asc" ? (
+      <ArrowUp className="ml-2 h-4 w-4" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4" />
+    );
+  };
+
+  const handleEdit = (id: string) => {
     toast({
       title: "Edit employee",
       description: "This would open an edit dialog in a real application",
-    })
-  }
+    });
+  };
 
-  const handleDelete = (id: number) => {
-    setDeleteId(id)
-  }
+  const handleDelete = (id: string) => {
+    setDeleteId(id);
+  };
 
   const confirmDelete = () => {
     if (deleteId) {
-      setEmployees(employees.filter((employee) => employee.id !== deleteId))
+      if (onDelete) {
+        // Use the provided onDelete function if available
+        onDelete(deleteId);
+      }
 
-      toast({
-        title: "Employee deleted",
-        description: "The employee has been removed from the directory",
-      })
-
-      setDeleteId(null)
+      setDeleteId(null);
     }
-  }
+  };
 
   const handleViewProfile = (employee: Employee) => {
-    setViewEmployee(employee)
-  }
+    setViewEmployee(employee);
+  };
 
-  const handleViewAttendance = (id: number) => {
+  const handleViewAttendance = (id: string) => {
     toast({
       title: "View attendance",
       description: "This would navigate to the employee's attendance records",
-    })
-  }
+    });
+  };
 
-  const handleViewLeaveHistory = (id: number) => {
+  const handleViewLeaveHistory = (id: string) => {
     toast({
       title: "View leave history",
       description: "This would navigate to the employee's leave history",
-    })
-  }
+    });
+  };
 
   return (
     <>
@@ -112,66 +178,132 @@ export function EmployeesTable({ employees: initialEmployees }: EmployeesTablePr
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Position</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Join Date</TableHead>
-              <TableHead>Tenure</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("name")}
+                  className="flex items-center p-0 font-medium"
+                >
+                  Name
+                  {getSortIcon("name")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("position")}
+                  className="flex items-center p-0 font-medium"
+                >
+                  Position
+                  {getSortIcon("position")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("department")}
+                  className="flex items-center p-0 font-medium"
+                >
+                  Department
+                  {getSortIcon("department")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("joinDate")}
+                  className="flex items-center p-0 font-medium"
+                >
+                  Join Date
+                  {getSortIcon("joinDate")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("tenure")}
+                  className="flex items-center p-0 font-medium"
+                >
+                  Tenure
+                  {getSortIcon("tenure")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("status")}
+                  className="flex items-center p-0 font-medium"
+                >
+                  Status
+                  {getSortIcon("status")}
+                </Button>
+              </TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {employees.map((employee) => (
-              <TableRow key={employee.id}>
-                <TableCell className="font-medium">{employee.name}</TableCell>
-                <TableCell>{employee.position}</TableCell>
-                <TableCell>{employee.department}</TableCell>
-                <TableCell>{formatDate(employee.joinDate)}</TableCell>
-                <TableCell>{calculateTenure(employee.joinDate)} years</TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    className="bg-green-50 text-green-700 hover:bg-green-50 dark:bg-green-900/20 dark:text-green-400"
-                  >
-                    {employee.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleEdit(employee.id)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleViewProfile(employee)}>
-                        <UserCircle className="mr-2 h-4 w-4" />
-                        View Profile
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleViewAttendance(employee.id)}>
-                        View Attendance
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleViewLeaveHistory(employee.id)}>
-                        View Leave History
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(employee.id)}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+            {employees.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-6">
+                  No employees found
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              employees.map((employee) => (
+                <TableRow key={employee.id}>
+                  <TableCell className="font-medium">{employee.name}</TableCell>
+                  <TableCell>{employee.position}</TableCell>
+                  <TableCell>{employee.department}</TableCell>
+                  <TableCell>{formatDate(employee.joinDate)}</TableCell>
+                  <TableCell>{calculateTenure(employee.joinDate)} years</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={`${
+                        employee.status === "Active"
+                          ? "bg-green-50 text-green-700 hover:bg-green-50 dark:bg-green-900/20 dark:text-green-400"
+                          : "bg-red-50 text-red-700 hover:bg-red-50 dark:bg-red-900/20 dark:text-red-400"
+                      }`}
+                    >
+                      {employee.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleEdit(employee.id)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleViewProfile(employee)}>
+                          <UserCircle className="mr-2 h-4 w-4" />
+                          View Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleViewAttendance(employee.id)}>
+                          View Attendance
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleViewLeaveHistory(employee.id)}>
+                          View Leave History
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(employee.id)}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
@@ -232,7 +364,11 @@ export function EmployeesTable({ employees: initialEmployees }: EmployeesTablePr
                   <p className="text-sm font-medium text-muted-foreground">Status</p>
                   <Badge
                     variant="outline"
-                    className="bg-green-50 text-green-700 hover:bg-green-50 dark:bg-green-900/20 dark:text-green-400"
+                    className={`${
+                      viewEmployee.status === "Active"
+                        ? "bg-green-50 text-green-700 hover:bg-green-50 dark:bg-green-900/20 dark:text-green-400"
+                        : "bg-red-50 text-red-700 hover:bg-red-50 dark:bg-red-900/20 dark:text-red-400"
+                    }`}
                   >
                     {viewEmployee.status}
                   </Badge>
@@ -243,5 +379,5 @@ export function EmployeesTable({ employees: initialEmployees }: EmployeesTablePr
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }

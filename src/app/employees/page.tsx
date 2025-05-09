@@ -1,28 +1,218 @@
-import { DashboardShell } from "@/components/dashboard/dashboard-shell"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getEmployeesData } from "@/lib/data"
-import { Button } from "@/components/ui/button"
-import { PlusCircle, Search } from "lucide-react"
-import { EmployeesTable } from "@/components/dashboard/employees-table"
-import { Input } from "@/components/ui/input"
-import { AddEmployeeDialog } from "@/components/dashboard/add-employee-dialog"
+"use client";
+
+import { useState, useEffect } from "react";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { PlusCircle, Search } from "lucide-react";
+import { EmployeesTable } from "@/components/dashboard/employees-table";
+import { Input } from "@/components/ui/input";
+import { AddEmployeeDialog } from "@/components/dashboard/add-employee-dialog";
+import { useToast } from "@/components/ui/use-toast";
+
+interface Employee {
+  id: string;
+  name: string;
+  position: string;
+  department: string;
+  joinDate: string;
+  status: string;
+  email: string;
+  phoneNumber: string;
+  role: string;
+  selfieUrl?: string | null;
+}
+
+interface SortParams {
+  sortBy: string;
+  order: "asc" | "desc";
+}
 
 export default function EmployeesPage() {
-  const employees = getEmployeesData()
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortParams, setSortParams] = useState<SortParams>({
+    sortBy: "createdAt",
+    order: "desc",
+  });
+  const { toast } = useToast();
+
+  const fetchEmployees = async (search?: string) => {
+    try {
+      // setLoading(true);
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        throw new Error("Authentication token not found");
+      }
+
+      // Build query string with sorting and search parameters
+      const queryParams = new URLSearchParams();
+      queryParams.append("sortBy", sortParams.sortBy);
+      queryParams.append("order", sortParams.order);
+      
+      if (search) {
+        queryParams.append("search", search);
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/get-users?${queryParams.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch employees");
+      }
+
+      const data = await response.json();
+      console.log("API Response:", data);
+
+      // Transform the data to match the expected format
+      const formattedEmployees = data.data.users.map((user: any) => ({
+        id: user._id,
+        name: user.username,
+        position: user.position || "Employee",
+        department: user.department || "General",
+        joinDate: user.createdAt || new Date().toISOString(),
+        status: user.deletedAt ? "Inactive" : "Active",
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        selfieUrl: user.selfieUrl,
+      }));
+
+      setEmployees(formattedEmployees);
+    } catch (err) {
+      console.error("Error fetching employees:", err);
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEmployees(searchTerm);
+  }, [sortParams, searchTerm]);
+
+  // Function to handle sorting
+  const handleSort = (field: string, direction: string) => {
+    setSortParams({
+      sortBy: field,
+      order: direction as "asc" | "desc",
+    });
+  };
+
+  // Function to handle search
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // Function to delete an employee
+  const handleDeleteEmployee = async (id: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      
+      if (!token) {
+        throw new Error("Authentication token not found");
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/delete-user/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to delete employee");
+      }
+
+      // Remove the deleted employee from the state
+      setEmployees((prevEmployees) => 
+        prevEmployees.filter((employee) => employee.id !== id)
+      );
+
+      toast({
+        title: "Success",
+        description: "Employee deleted successfully",
+        variant: "default",
+      });
+    } catch (err) {
+      console.error("Error deleting employee:", err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to delete employee",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Count employees by department
-  const departmentCounts = employees.reduce(
-    (acc, employee) => {
-      acc[employee.department] = (acc[employee.department] || 0) + 1
-      return acc
-    },
-    {} as Record<string, number>,
-  )
+  const departmentCounts = employees.reduce((acc, employee) => {
+    acc[employee.department] = (acc[employee.department] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   // Get top 3 departments
   const topDepartments = Object.entries(departmentCounts)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
+    .slice(0, 3);
+
+  if (loading) {
+    return (
+      <DashboardShell>
+        <div className="flex flex-col gap-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Employees</h1>
+            <p className="text-muted-foreground">
+              Manage employee profiles and information
+            </p>
+          </div>
+          <div className="flex justify-center items-center min-h-[400px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </DashboardShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardShell>
+        <div className="flex flex-col gap-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Employees</h1>
+            <p className="text-muted-foreground">
+              Manage employee profiles and information
+            </p>
+          </div>
+          <div className="flex justify-center items-center min-h-[400px]">
+            <div className="bg-red-50 text-red-600 p-4 rounded-lg shadow">
+              Error: {error}
+            </div>
+          </div>
+        </div>
+      </DashboardShell>
+    );
+  }
 
   return (
     <DashboardShell>
@@ -30,12 +220,20 @@ export default function EmployeesPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Employees</h1>
-            <p className="text-muted-foreground">Manage employee profiles and information</p>
+            <p className="text-muted-foreground">
+              Manage employee profiles and information
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <div className="relative w-full md:w-auto">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Search employees..." className="w-full pl-8 md:w-[300px]" />
+              <Input
+                type="search"
+                placeholder="Search employees..."
+                className="w-full pl-8 md:w-[300px]"
+                value={searchTerm}
+                onChange={handleSearch}
+              />
             </div>
             <AddEmployeeDialog>
               <Button className="gap-2">
@@ -49,7 +247,9 @@ export default function EmployeesPage() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Employees
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{employees.length}</div>
@@ -62,18 +262,28 @@ export default function EmployeesPage() {
               <CardTitle className="text-sm font-medium">Departments</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{Object.keys(departmentCounts).length}</div>
-              <p className="text-xs text-muted-foreground">Across the organization</p>
+              <div className="text-2xl font-bold">
+                {Object.keys(departmentCounts).length}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Across the organization
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Largest Department</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Largest Department
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{topDepartments[0]?.[0] || "None"}</div>
-              <p className="text-xs text-muted-foreground">{topDepartments[0]?.[1] || 0} employees</p>
+              <div className="text-2xl font-bold">
+                {topDepartments[0]?.[0] || "None"}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {topDepartments[0]?.[1] || 0} employees
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -84,10 +294,16 @@ export default function EmployeesPage() {
             <CardDescription>View and manage all employees</CardDescription>
           </CardHeader>
           <CardContent>
-            <EmployeesTable employees={employees} />
+            <EmployeesTable 
+              employees={employees} 
+              onDelete={handleDeleteEmployee}
+              onSort={handleSort}
+              currentSortField={sortParams.sortBy}
+              currentSortOrder={sortParams.order}
+            />
           </CardContent>
         </Card>
       </div>
     </DashboardShell>
-  )
+  );
 }
