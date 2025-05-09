@@ -4,12 +4,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useToast } from "@/components/ui/use-toast";
+import { Eye, EyeOff } from "lucide-react"; // Add these imports
 
 export default function RegisterPage() {
   const router = useRouter();
   const { toast } = useToast();
+  // Add state variables for password visibility
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [form, setForm] = useState({
     username: "",
+    firstName: "",
+    lastName: "",
     phoneNumber: "",
     email: "",
     password: "",
@@ -18,6 +24,8 @@ export default function RegisterPage() {
   });
   const [errors, setErrors] = useState({
     username: "",
+    firstName: "",
+    lastName: "",
     phoneNumber: "",
     email: "",
     password: "",
@@ -29,8 +37,24 @@ export default function RegisterPage() {
   const validateField = (name: string, value: string) => {
     switch (name) {
       case "username":
+        const usernameRegex = /^[a-zA-Z0-9@#_-]+$/;
         if (value.length < 3 || value.length > 30) {
           return "Username must be between 3 and 30 characters";
+        }
+        if (!usernameRegex.test(value)) {
+          return "Username can only contain letters, numbers, and special characters (@, #, _, -)";
+        }
+        break;
+      case "firstName":
+      case "lastName":
+        if (!value.trim()) {
+          return `${name === "firstName" ? "First" : "Last"} name is required`;
+        }
+        const nameRegex = /^[A-Za-z]+$/;
+        if (!nameRegex.test(value)) {
+          return `${
+            name === "firstName" ? "First" : "Last"
+          } name can only contain letters`;
         }
         break;
       case "phoneNumber":
@@ -44,12 +68,20 @@ export default function RegisterPage() {
         }
         break;
       case "password":
-        if (
-          !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(
-            value
-          )
-        ) {
-          return "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character";
+        if (value.length < 8) {
+          return "Password must be at least 8 characters long";
+        }
+        if (!/[a-z]/.test(value)) {
+          return "Password must contain at least one lowercase letter";
+        }
+        if (!/[A-Z]/.test(value)) {
+          return "Password must contain at least one uppercase letter";
+        }
+        if (!/\d/.test(value)) {
+          return "Password must contain at least one number";
+        }
+        if (!/[@$!%*?&]/.test(value)) {
+          return "Password must contain at least one special character (@$!%*?&)";
         }
         break;
       case "confirmPassword":
@@ -108,6 +140,8 @@ export default function RegisterPage() {
     try {
       const data = new FormData();
       data.append("username", form.username);
+      data.append("firstName", form.firstName);
+      data.append("lastName", form.lastName);
       data.append("phoneNumber", form.phoneNumber);
       data.append("email", form.email);
       data.append("password", form.password);
@@ -175,9 +209,68 @@ export default function RegisterPage() {
                 placeholder="Enter your username"
                 value={form.username}
                 onChange={handleChange}
+                minLength={3}
+                maxLength={30}
+                onKeyPress={(e) => {
+                  if (!/^[a-zA-Z0-9@#_-]+$/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
               />
               {errors.username && (
                 <p className="text-red-500 text-xs mt-1">{errors.username}</p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="firstName" className="text-sm font-medium">
+                First Name
+              </label>
+              <input
+                id="firstName"
+                name="firstName"
+                type="text"
+                required
+                autoComplete="off"
+                className={`mt-1 block w-full rounded-md border ${
+                  errors.firstName ? "border-red-500" : "border-input"
+                } bg-background px-3 py-2 text-sm`}
+                placeholder="Enter your first name"
+                value={form.firstName}
+                onChange={handleChange}
+                onKeyPress={(e) => {
+                  if (!/^[A-Za-z]+$/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+              />
+              {errors.firstName && (
+                <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="lastName" className="text-sm font-medium">
+                Last Name
+              </label>
+              <input
+                id="lastName"
+                name="lastName"
+                type="text"
+                required
+                autoComplete="off"
+                className={`mt-1 block w-full rounded-md border ${
+                  errors.lastName ? "border-red-500" : "border-input"
+                } bg-background px-3 py-2 text-sm`}
+                placeholder="Enter your last name"
+                value={form.lastName}
+                onChange={handleChange}
+                onKeyPress={(e) => {
+                  if (!/^[A-Za-z]+$/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+              />
+              {errors.lastName && (
+                <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>
               )}
             </div>
             <div>
@@ -188,14 +281,23 @@ export default function RegisterPage() {
                 id="phoneNumber"
                 name="phoneNumber"
                 type="tel"
+                pattern="[0-9]*"
+                inputMode="numeric"
                 required
                 autoComplete="off"
+                maxLength={10}
                 className={`mt-1 block w-full rounded-md border ${
                   errors.phoneNumber ? "border-red-500" : "border-input"
                 } bg-background px-3 py-2 text-sm`}
                 placeholder="Enter your phone number"
                 value={form.phoneNumber}
                 onChange={handleChange}
+                onKeyPress={(e) => {
+                  // Allow only numeric input
+                  if (!/[0-9]/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
               />
               {errors.phoneNumber && (
                 <p className="text-red-500 text-xs mt-1">
@@ -228,19 +330,33 @@ export default function RegisterPage() {
               <label htmlFor="password" className="text-sm font-medium">
                 Password
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                autoComplete="off"
-                className={`mt-1 block w-full rounded-md border ${
-                  errors.password ? "border-red-500" : "border-input"
-                } bg-background px-3 py-2 text-sm`}
-                placeholder="Enter your password"
-                value={form.password}
-                onChange={handleChange}
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  autoComplete="off"
+                  className={`mt-1 block w-full rounded-md border ${
+                    errors.password ? "border-red-500" : "border-input"
+                  } bg-background px-3 py-2 text-sm`}
+                  placeholder="Enter your password"
+                  value={form.password}
+                  minLength={8}
+                  onChange={handleChange}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <Eye className="h-4 w-4" />
+                  ) : (
+                    <EyeOff className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
               {errors.password && (
                 <p className="text-red-500 text-xs mt-1">{errors.password}</p>
               )}
@@ -249,19 +365,33 @@ export default function RegisterPage() {
               <label htmlFor="confirmPassword" className="text-sm font-medium">
                 Confirm Password
               </label>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                required
-                autoComplete="off"
-                className={`mt-1 block w-full rounded-md border ${
-                  errors.confirmPassword ? "border-red-500" : "border-input"
-                } bg-background px-3 py-2 text-sm`}
-                placeholder="Confirm your password"
-                value={form.confirmPassword}
-                onChange={handleChange}
-              />
+              <div className="relative">
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  required
+                  autoComplete="off"
+                  className={`mt-1 block w-full rounded-md border ${
+                    errors.confirmPassword ? "border-red-500" : "border-input"
+                  } bg-background px-3 py-2 text-sm`}
+                  placeholder="Confirm your password"
+                  minLength={8}
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? (
+                    <Eye className="h-4 w-4" />
+                  ) : (
+                    <EyeOff className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
               {errors.confirmPassword && (
                 <p className="text-red-500 text-xs mt-1">
                   {errors.confirmPassword}
@@ -281,7 +411,7 @@ export default function RegisterPage() {
                 required
                 autoComplete="off"
                 onChange={handleChange}
-                className={`mt-1 block w-full ${
+                className={`mt-1 block w-full rounded-md border bg-background px-3 py-2 text-gray-400 text-sm hover:cursor-pointer ${
                   errors.selfie ? "text-red-500" : ""
                 }`}
               />
